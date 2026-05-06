@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visitor Tracker</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <div class="page-wrapper">
+
+    <!-- Header -->
+    <header>
+      <h1>Visitor <span>Tracker</span></h1>
+      <div class="status-badge">
+        <div class="status-dot" id="status-dot"></div>
+        <span>Live &mdash; updates every 5s</span>
+      </div>
+    </header>
+
+    <!-- Summary cards -->
+    <div class="cards-row">
+      <div class="card">
+        <div class="card-label">Total Visits</div>
+        <div class="card-value" id="total-visits">—</div>
+      </div>
+      <div class="card">
+        <div class="card-label">Unique Countries</div>
+        <div class="card-value accent" id="unique-countries">—</div>
+      </div>
+    </div>
+
+    <!-- Top Countries -->
+    <div class="section">
+      <div class="section-title">Top Countries</div>
+      <div class="country-list" id="country-list">
+        <p class="empty-state loading">Loading&hellip;</p>
+      </div>
+    </div>
+
+    <!-- Top Cities -->
+    <div class="section" id="city-section" style="display:none">
+      <div class="section-header">
+        <div class="section-title">Top Cities</div>
+        <button class="filter-clear" id="filter-clear" style="display:none">&times; <span id="filter-label"></span></button>
+      </div>
+      <div class="country-list" id="city-list"></div>
+    </div>
+
+    <div class="last-updated" id="last-updated"></div>
+
+    <footer>
+      <p>Self-hosted analytics &mdash; built in C &middot;
+        <a href="/health">/health</a> &middot;
+        <a href="/stats">/stats</a>
+      </p>
+    </footer>
+
+  </div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>
