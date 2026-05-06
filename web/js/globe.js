@@ -34,7 +34,6 @@
         .height(H)
         .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-dark.jpg')
         .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
-        /* City dots */
         .pointsData([])
         .pointLat('lat')
         .pointLng('lng')
@@ -46,7 +45,6 @@
             return '<div style="font-size:0.8rem;background:#1c2230;padding:4px 8px;border-radius:6px;border:1px solid #30363d">' +
                 '<strong>' + label + '</strong><br>' + d.count.toLocaleString() + ' visits</div>';
         })
-        /* City pulse rings */
         .ringsData([])
         .ringLat('lat')
         .ringLng('lng')
@@ -59,7 +57,6 @@
     myGlobe.controls().autoRotate      = true;
     myGlobe.controls().autoRotateSpeed = 0.08;
 
-    /* Country outlines via world-atlas TopoJSON */
     if (typeof topojson !== 'undefined') {
         fetch('https://unpkg.com/world-atlas@2.0.2/countries-110m.json')
             .then(function (r) { return r.json(); })
@@ -96,9 +93,7 @@
                 count:   c.count,
                 color:   color,
             };
-            dots.push(Object.assign({}, base, {
-                radius: 0.2 + t * 0.5,
-            }));
+            dots.push(Object.assign({}, base, { radius: 0.2 + t * 0.5 }));
             rings.push(Object.assign({}, base, {
                 maxRadius: 1.5 + t * 3.5,
                 speed:     0.8 + t * 1.5,
