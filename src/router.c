@@ -2,6 +2,7 @@
 #include "handlers/visit.h"
 #include "handlers/stats.h"
 #include "handlers/health.h"
+#include "handlers/globe.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -71,6 +72,10 @@ void router_dispatch(int client_fd, HttpRequest *req) {
     fflush(stdout);
 
     if (strcmp(req->method, "GET") == 0) {
+        if (strncmp(req->path, "/globe", 6) == 0) {
+            handle_globe(client_fd, req);
+            return;
+        }
         if (strncmp(req->path, "/stats", 6) == 0) {
             handle_stats(client_fd, req);
             return;

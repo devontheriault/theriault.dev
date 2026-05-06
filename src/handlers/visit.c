@@ -27,12 +27,13 @@ static void send_404(int client_fd) {
 
 void handle_visit(int client_fd, const HttpRequest *req) {
     /* Perform geo lookup */
-    char country[64] = "Unknown";
-    char city[64]    = "Unknown";
-    geo_lookup(req->client_ip, country, city);
+    char   country[64] = "Unknown";
+    char   city[64]    = "Unknown";
+    double lat = 0.0, lng = 0.0;
+    geo_lookup(req->client_ip, country, city, &lat, &lng);
 
     /* Record the visit */
-    logger_record(req->client_ip, country, city, req->user_agent);
+    logger_record(req->client_ip, country, city, req->user_agent, lat, lng);
 
     /* Read index.html from disk */
     FILE *f = fopen(HTML_PATH, "rb");

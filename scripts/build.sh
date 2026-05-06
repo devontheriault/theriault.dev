@@ -18,6 +18,7 @@ SRCS=(
     src/handlers/visit.c
     src/handlers/stats.c
     src/handlers/health.c
+    src/handlers/globe.c
     src/services/logger.c
     src/services/geo.c
     src/services/analytics.c

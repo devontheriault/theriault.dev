@@ -266,6 +266,29 @@ footer a {
     margin-top: 0.6rem;
 }
 
+/* ===== Globe ===== */
+.globe-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-bottom: 0.5rem;
+}
+
+#globe-container {
+    width: 100%;
+    height: 500px;
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: #000510;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#globe-container > div {
+    margin: 0 auto;
+}
+
 /* ===== Responsive ===== */
 @media (max-width: 480px) {
     header {

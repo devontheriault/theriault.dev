@@ -27,9 +27,11 @@ static int geo_open_db(void) {
     return 0;
 }
 
-int geo_lookup(const char *ip, char *country_out, char *city_out) {
+int geo_lookup(const char *ip, char *country_out, char *city_out, double *lat_out, double *lng_out) {
     strncpy(country_out, "Unknown", 63); country_out[63] = '\0';
     strncpy(city_out,    "Unknown", 63); city_out[63]    = '\0';
+    *lat_out = 0.0;
+    *lng_out = 0.0;
 
     if (!ip || *ip == '\0') {
         strncpy(country_out, "Local", 63);
@@ -52,7 +54,7 @@ int geo_lookup(const char *ip, char *country_out, char *city_out) {
 
     sqlite3_stmt *stmt = NULL;
     const char *sql =
-        "SELECT country, city, end_ip FROM ip_ranges "
+        "SELECT country, city, end_ip, latitude, longitude FROM ip_ranges "
         "WHERE start_ip <= ? ORDER BY start_ip DESC LIMIT 1";
 
     if (sqlite3_prepare_v2(geo_db, sql, -1, &stmt, NULL) != SQLITE_OK) {
@@ -70,6 +72,8 @@ int geo_lookup(const char *ip, char *country_out, char *city_out) {
             const char *city    = (const char *)sqlite3_column_text(stmt, 1);
             if (country && country[0]) { strncpy(country_out, country, 63); country_out[63] = '\0'; }
             if (city    && city[0])    { strncpy(city_out,    city,    63); city_out[63]    = '\0'; }
+            *lat_out = sqlite3_column_double(stmt, 3);
+            *lng_out = sqlite3_column_double(stmt, 4);
             ret = 0;
         }
     }

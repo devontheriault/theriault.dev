@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <time.h>
 
-int logger_record(const char *ip, const char *country, const char *city, const char *user_agent) {
+int logger_record(const char *ip, const char *country, const char *city, const char *user_agent, double lat, double lng) {
     time_t now = time(NULL);
     char tbuf[32];
     struct tm *tm_info = localtime(&now);
@@ -13,5 +13,5 @@ int logger_record(const char *ip, const char *country, const char *city, const c
             tbuf, ip, country, city, user_agent ? user_agent : "");
     fflush(stdout);
 
-    return db_insert_visit(ip, country, city, user_agent);
+    return db_insert_visit(ip, country, city, user_agent, lat, lng);
 }
