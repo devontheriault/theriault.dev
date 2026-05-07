@@ -51,6 +51,12 @@ header {
     border-bottom: 1px solid var(--border);
 }
 
+.header-title {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
 header h1 {
     font-size: 1.5rem;
     font-weight: 600;
@@ -60,6 +66,12 @@ header h1 {
 
 header h1 span {
     color: var(--accent);
+}
+
+.header-tagline {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    font-style: italic;
 }
 
 .status-badge {
@@ -251,6 +263,10 @@ footer {
 footer a {
     color: var(--accent);
     text-decoration: none;
+}
+
+footer .tech-note {
+    opacity: 0.75;
 }
 
 /* ===== Loading ===== */
