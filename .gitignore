@@ -1,6 +1,12 @@
 data/
+
 *.db
+
 *.sqlite
 *.sqlite3
+
 *.log
-*.md
+
+claude.md
+
+server
