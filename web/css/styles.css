@@ -98,7 +98,7 @@ header h1 span {
 /* ===== Stat Cards ===== */
 .cards-row {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
     gap: 1rem;
     margin-bottom: 2rem;
 }
@@ -124,6 +124,10 @@ header h1 span {
     margin-bottom: 0.5rem;
 }
 
+.card-label br {
+    display: none;
+}
+
 .card-value {
     font-size: 2.4rem;
     font-weight: 700;
@@ -132,7 +136,7 @@ header h1 span {
 }
 
 .card-value.accent {
-    color: var(--accent);
+    color: var(--text-primary);
 }
 
 /* ===== Section ===== */
@@ -310,7 +314,6 @@ footer .tech-note {
     display: flex;
     flex-direction: column;
     gap: 0.3rem;
-    overflow-x: auto;
 }
 
 .heatmap-hour-labels {
@@ -369,6 +372,29 @@ footer .tech-note {
 }
 
 /* ===== Responsive ===== */
+@media (max-width: 600px) {
+    .heatmap-cell {
+        min-width: 0;
+        border-radius: 2px;
+    }
+
+    .heatmap-hour-labels span {
+        font-size: 0.5rem;
+    }
+
+    .heatmap-day-labels {
+        min-width: 1.8rem;
+    }
+
+    .heatmap-day-labels span {
+        font-size: 0.55rem;
+    }
+
+    .heatmap-hour-labels {
+        margin-left: 2.2rem;
+    }
+}
+
 @media (max-width: 480px) {
     header {
         flex-direction: column;
@@ -378,5 +404,13 @@ footer .tech-note {
 
     .card-value {
         font-size: 2rem;
+    }
+
+    .card-label br {
+        display: inline;
+    }
+
+    .card-label {
+        min-height: 2.2em;
     }
 }
