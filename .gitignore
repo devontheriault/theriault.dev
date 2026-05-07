@@ -3,3 +3,4 @@ data/
 *.sqlite
 *.sqlite3
 *.log
+*.md

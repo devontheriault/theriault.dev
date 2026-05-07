@@ -25,11 +25,11 @@
             <!-- Summary cards -->
             <div class="cards-row">
                 <div class="card">
-                    <div class="card-label">Total<br> Visits</div>
+                    <div class="card-label">Total<br />Visits</div>
                     <div class="card-value" id="total-visits">—</div>
                 </div>
                 <div class="card">
-                    <div class="card-label">Unique<br> Countries</div>
+                    <div class="card-label">Unique<br />Countries</div>
                     <div class="card-value accent" id="unique-countries">—</div>
                 </div>
             </div>
@@ -65,7 +65,16 @@
 
             <!-- Heatmap -->
             <div class="section">
-                <div class="section-title">Visits by Hour &amp; Day</div>
+                <div class="section-header">
+                    <div class="section-title">Visits by Hour &amp; Day</div>
+                    <button
+                        id="heatmap-filter-clear"
+                        class="filter-clear"
+                        style="display: none"
+                    >
+                        &times; <span id="heatmap-filter-label"></span>
+                    </button>
+                </div>
                 <div class="heatmap-wrap">
                     <div
                         class="heatmap-hour-labels"

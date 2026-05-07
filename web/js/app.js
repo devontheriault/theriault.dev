@@ -15,6 +15,8 @@ const elCitySection      = document.getElementById('city-section');
 const elCityList         = document.getElementById('city-list');
 const elFilterClear      = document.getElementById('filter-clear');
 const elFilterLabel      = document.getElementById('filter-label');
+const elHeatmapFilterClear = document.getElementById('heatmap-filter-clear');
+const elHeatmapFilterLabel = document.getElementById('heatmap-filter-label');
 const elLastUpdated      = document.getElementById('last-updated');
 const elStatusDot        = document.getElementById('status-dot');
 
@@ -97,6 +99,8 @@ function renderStats(data) {
         const ac = data.active_country || '';
         elFilterClear.style.display = ac ? '' : 'none';
         elFilterLabel.textContent = ac;
+        elHeatmapFilterClear.style.display = ac ? '' : 'none';
+        elHeatmapFilterLabel.textContent = ac;
     }
 
     if (elLastUpdated) {
@@ -182,6 +186,14 @@ if (elCountryList) {
 
 if (elFilterClear) {
     elFilterClear.addEventListener('click', function() {
+        activeCountry = null;
+        fetchStats();
+        fetchHeatmap();
+    });
+}
+
+if (elHeatmapFilterClear) {
+    elHeatmapFilterClear.addEventListener('click', function() {
         activeCountry = null;
         fetchStats();
         fetchHeatmap();

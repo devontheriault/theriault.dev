@@ -294,6 +294,10 @@ footer .tech-note {
     padding-bottom: 0.5rem;
 }
 
+.globe-section .section-title {
+    align-self: flex-start;
+}
+
 #globe-container {
     width: 100%;
     height: 500px;
