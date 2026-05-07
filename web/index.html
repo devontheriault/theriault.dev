@@ -1,72 +1,96 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Visitor Tracker</title>
-  <link rel="stylesheet" href="/css/styles.css">
-</head>
-<body>
-  <div class="page-wrapper">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Visitor Tracker</title>
+        <link rel="stylesheet" href="/css/styles.css" />
+    </head>
+    <body>
+        <div class="page-wrapper">
+            <!-- Header -->
+            <header>
+                <h1>Visitor <span>Tracker</span></h1>
+                <div class="status-badge">
+                    <div class="status-dot" id="status-dot"></div>
+                    <span>Live &mdash; updates every 5s</span>
+                </div>
+            </header>
 
-    <!-- Header -->
-    <header>
-      <h1>Visitor <span>Tracker</span></h1>
-      <div class="status-badge">
-        <div class="status-dot" id="status-dot"></div>
-        <span>Live &mdash; updates every 5s</span>
-      </div>
-    </header>
+            <!-- Summary cards -->
+            <div class="cards-row">
+                <div class="card">
+                    <div class="card-label">Total Visits</div>
+                    <div class="card-value" id="total-visits">—</div>
+                </div>
+                <div class="card">
+                    <div class="card-label">Unique Countries</div>
+                    <div class="card-value accent" id="unique-countries">—</div>
+                </div>
+            </div>
 
-    <!-- Summary cards -->
-    <div class="cards-row">
-      <div class="card">
-        <div class="card-label">Total Visits</div>
-        <div class="card-value" id="total-visits">—</div>
-      </div>
-      <div class="card">
-        <div class="card-label">Unique Countries</div>
-        <div class="card-value accent" id="unique-countries">—</div>
-      </div>
-    </div>
+            <!-- 3D Globe -->
+            <div class="section globe-section">
+                <div class="section-title">Visitor Globe</div>
+                <div id="globe-container"></div>
+            </div>
 
-    <!-- 3D Globe -->
-    <div class="section globe-section">
-      <div class="section-title">Visitor Globe</div>
-      <div id="globe-container"></div>
-    </div>
+            <!-- Top Countries -->
+            <div class="section">
+                <div class="section-title">Top Countries</div>
+                <div class="country-list" id="country-list">
+                    <p class="empty-state loading">Loading&hellip;</p>
+                </div>
+            </div>
 
-    <!-- Top Countries -->
-    <div class="section">
-      <div class="section-title">Top Countries</div>
-      <div class="country-list" id="country-list">
-        <p class="empty-state loading">Loading&hellip;</p>
-      </div>
-    </div>
+            <!-- Top Cities -->
+            <div class="section" id="city-section" style="display: none">
+                <div class="section-header">
+                    <div class="section-title">Top Cities</div>
+                    <button
+                        class="filter-clear"
+                        id="filter-clear"
+                        style="display: none"
+                    >
+                        &times; <span id="filter-label"></span>
+                    </button>
+                </div>
+                <div class="country-list" id="city-list"></div>
+            </div>
 
-    <!-- Top Cities -->
-    <div class="section" id="city-section" style="display:none">
-      <div class="section-header">
-        <div class="section-title">Top Cities</div>
-        <button class="filter-clear" id="filter-clear" style="display:none">&times; <span id="filter-label"></span></button>
-      </div>
-      <div class="country-list" id="city-list"></div>
-    </div>
+            <!-- Heatmap -->
+            <div class="section">
+                <div class="section-title">Visits by Hour &amp; Day</div>
+                <div class="heatmap-wrap">
+                    <div
+                        class="heatmap-hour-labels"
+                        id="heatmap-hour-labels"
+                    ></div>
+                    <div class="heatmap-body">
+                        <div class="heatmap-day-labels">
+                            <span>Sun</span><span>Mon</span><span>Tue</span>
+                            <span>Wed</span><span>Thu</span><span>Fri</span
+                            ><span>Sat</span>
+                        </div>
+                        <div class="heatmap-grid" id="heatmap-grid"></div>
+                    </div>
+                </div>
+            </div>
 
-    <div class="last-updated" id="last-updated"></div>
+            <div class="last-updated" id="last-updated"></div>
 
-    <footer>
-      <p>Self-hosted analytics &mdash; built in C &middot;
-        <a href="/health">/health</a> &middot;
-        <a href="/stats">/stats</a>
-      </p>
-    </footer>
+            <footer>
+                <p>
+                    Self-hosted analytics &mdash; built in C &middot;
+                    <a href="/health">/health</a> &middot;
+                    <a href="/stats">/stats</a>
+                </p>
+            </footer>
+        </div>
 
-  </div>
-
-  <script src="/js/app.js"></script>
-  <script src="https://unpkg.com/topojson-client@3/dist/topojson-client.min.js"></script>
-  <script src="https://unpkg.com/globe.gl/dist/globe.gl.min.js"></script>
-  <script src="/js/globe.js"></script>
-</body>
+        <script src="/js/app.js"></script>
+        <script src="https://unpkg.com/topojson-client@3/dist/topojson-client.min.js"></script>
+        <script src="https://unpkg.com/globe.gl/dist/globe.gl.min.js"></script>
+        <script src="/js/globe.js"></script>
+    </body>
 </html>

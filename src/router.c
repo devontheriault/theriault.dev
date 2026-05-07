@@ -3,6 +3,7 @@
 #include "handlers/stats.h"
 #include "handlers/health.h"
 #include "handlers/globe.h"
+#include "handlers/heatmap.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -82,6 +83,10 @@ void router_dispatch(int client_fd, HttpRequest *req) {
         }
         if (strncmp(req->path, "/health", 7) == 0) {
             handle_health(client_fd, req);
+            return;
+        }
+        if (strncmp(req->path, "/heatmap", 8) == 0) {
+            handle_heatmap(client_fd, req);
             return;
         }
         /* Serve static assets (css, js, images) without recording a visit */

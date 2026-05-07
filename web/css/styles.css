@@ -289,6 +289,69 @@ footer a {
     margin: 0 auto;
 }
 
+/* ===== Heatmap ===== */
+.heatmap-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    overflow-x: auto;
+}
+
+.heatmap-hour-labels {
+    display: grid;
+    grid-template-columns: repeat(24, 1fr);
+    margin-left: 2.8rem;
+    gap: 2px;
+}
+
+.heatmap-hour-labels span {
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+.heatmap-body {
+    display: flex;
+    gap: 0.4rem;
+    align-items: stretch;
+}
+
+.heatmap-day-labels {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    min-width: 2.4rem;
+    gap: 2px;
+}
+
+.heatmap-day-labels span {
+    font-size: 0.62rem;
+    color: var(--text-muted);
+    text-align: right;
+    line-height: 1;
+}
+
+.heatmap-grid {
+    display: grid;
+    grid-template-columns: repeat(24, 1fr);
+    grid-template-rows: repeat(7, 1fr);
+    gap: 2px;
+    flex: 1;
+}
+
+.heatmap-cell {
+    aspect-ratio: 1;
+    border-radius: 3px;
+    min-width: 14px;
+    cursor: default;
+    transition: opacity 0.3s;
+}
+
+.heatmap-cell:hover {
+    opacity: 0.75;
+    outline: 1px solid var(--accent);
+}
+
 /* ===== Responsive ===== */
 @media (max-width: 480px) {
     header {

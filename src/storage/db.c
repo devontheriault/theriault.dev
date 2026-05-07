@@ -85,7 +85,7 @@ int db_insert_visit(const char *ip, const char *country, const char *city, const
 int db_get_total_visits(void) {
     if (!g_db) return 0;
 
-    const char *sql = "SELECT COUNT(DISTINCT ip || user_agent || timestamp) FROM visits;";
+    const char *sql = "SELECT COUNT(*) FROM visits WHERE country NOT IN ('Unknown', 'Localhost', 'Local', '');";
     sqlite3_stmt *stmt = NULL;
 
     if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK)
@@ -102,7 +102,7 @@ int db_get_total_visits(void) {
 int db_get_unique_countries(void) {
     if (!g_db) return 0;
 
-    const char *sql = "SELECT COUNT(DISTINCT country) FROM visits;";
+    const char *sql = "SELECT COUNT(DISTINCT country) FROM visits WHERE country NOT IN ('Unknown', 'Localhost', 'Local', '');";
     sqlite3_stmt *stmt = NULL;
 
     if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK)
@@ -122,6 +122,7 @@ int db_get_top_countries(char names[][64], int counts[], int max_n) {
     const char *sql =
         "SELECT country, COUNT(*) as cnt "
         "FROM visits "
+        "WHERE country NOT IN ('Unknown', 'Localhost', 'Local', '') "
         "GROUP BY country "
         "ORDER BY cnt DESC "
         "LIMIT ?;";
@@ -137,12 +138,8 @@ int db_get_top_countries(char names[][64], int counts[], int max_n) {
         const char *name = (const char *)sqlite3_column_text(stmt, 0);
         int cnt = sqlite3_column_int(stmt, 1);
 
-        if (name) {
-            strncpy(names[n], name, 63);
-            names[n][63] = '\0';
-        } else {
-            strncpy(names[n], "Unknown", 63);
-        }
+        strncpy(names[n], name, 63);
+        names[n][63] = '\0';
         counts[n] = cnt;
         n++;
     }
@@ -210,6 +207,7 @@ int db_get_all_countries(char names[][64], int counts[], int max_n) {
     const char *sql =
         "SELECT country, COUNT(*) as cnt "
         "FROM visits "
+        "WHERE country NOT IN ('Unknown', 'Localhost', 'Local', '') "
         "GROUP BY country "
         "ORDER BY cnt DESC "
         "LIMIT ?;";
@@ -225,18 +223,59 @@ int db_get_all_countries(char names[][64], int counts[], int max_n) {
         const char *name = (const char *)sqlite3_column_text(stmt, 0);
         int cnt = sqlite3_column_int(stmt, 1);
 
-        if (name) {
-            strncpy(names[n], name, 63);
-            names[n][63] = '\0';
-        } else {
-            strncpy(names[n], "Unknown", 63);
-        }
+        strncpy(names[n], name, 63);
+        names[n][63] = '\0';
         counts[n] = cnt;
         n++;
     }
 
     sqlite3_finalize(stmt);
     return n;
+}
+
+int db_get_heatmap_data(int counts[7][24], const char *country_filter) {
+    if (!g_db) return 0;
+
+    memset(counts, 0, 7 * 24 * sizeof(int));
+
+    int has_filter = country_filter && country_filter[0] != '\0';
+
+    const char *sql_all =
+        "SELECT CAST(strftime('%w', timestamp) AS INTEGER) as dow,"
+        "       CAST(strftime('%H', timestamp) AS INTEGER) as hr,"
+        "       COUNT(*) as cnt "
+        "FROM visits "
+        "WHERE country NOT IN ('Unknown', 'Localhost', 'Local', '') "
+        "GROUP BY dow, hr;";
+
+    const char *sql_filtered =
+        "SELECT CAST(strftime('%w', timestamp) AS INTEGER) as dow,"
+        "       CAST(strftime('%H', timestamp) AS INTEGER) as hr,"
+        "       COUNT(*) as cnt "
+        "FROM visits "
+        "WHERE country = ? "
+        "GROUP BY dow, hr;";
+
+    sqlite3_stmt *stmt = NULL;
+    if (sqlite3_prepare_v2(g_db, has_filter ? sql_filtered : sql_all, -1, &stmt, NULL) != SQLITE_OK)
+        return 0;
+
+    if (has_filter)
+        sqlite3_bind_text(stmt, 1, country_filter, -1, SQLITE_STATIC);
+
+    int max_count = 0;
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        int dow = sqlite3_column_int(stmt, 0);
+        int hr  = sqlite3_column_int(stmt, 1);
+        int cnt = sqlite3_column_int(stmt, 2);
+        if (dow >= 0 && dow < 7 && hr >= 0 && hr < 24) {
+            counts[dow][hr] = cnt;
+            if (cnt > max_count) max_count = cnt;
+        }
+    }
+
+    sqlite3_finalize(stmt);
+    return max_count;
 }
 
 int db_get_top_cities(char names[][64], int counts[], int max_n, const char *country_filter) {
@@ -248,7 +287,7 @@ int db_get_top_cities(char names[][64], int counts[], int max_n, const char *cou
     const char *sql_filtered =
         "SELECT city, COUNT(*) as cnt "
         "FROM visits "
-        "WHERE country = ? "
+        "WHERE country = ? AND city NOT IN ('Unknown', 'Localhost', 'Local', '') "
         "GROUP BY city "
         "ORDER BY cnt DESC "
         "LIMIT ?;";
@@ -256,6 +295,7 @@ int db_get_top_cities(char names[][64], int counts[], int max_n, const char *cou
     const char *sql_all =
         "SELECT city, COUNT(*) as cnt "
         "FROM visits "
+        "WHERE city NOT IN ('Unknown', 'Localhost', 'Local', '') "
         "GROUP BY city "
         "ORDER BY cnt DESC "
         "LIMIT ?;";
@@ -275,12 +315,8 @@ int db_get_top_cities(char names[][64], int counts[], int max_n, const char *cou
         const char *name = (const char *)sqlite3_column_text(stmt, 0);
         int cnt = sqlite3_column_int(stmt, 1);
 
-        if (name) {
-            strncpy(names[n], name, 63);
-            names[n][63] = '\0';
-        } else {
-            strncpy(names[n], "Unknown", 63);
-        }
+        strncpy(names[n], name ? name : "", 63);
+        names[n][63] = '\0';
         counts[n] = cnt;
         n++;
     }

@@ -10,5 +10,6 @@ int  db_get_top_countries(char names[][64], int counts[], int max_n);
 int  db_get_all_countries(char names[][64], int counts[], int max_n);
 int  db_get_top_cities(char names[][64], int counts[], int max_n, const char *country_filter);
 int  db_get_city_globe_data(char cities[][64], char countries[][64], int counts[], double lats[], double lngs[], int max_n);
+int  db_get_heatmap_data(int counts[7][24], const char *country_filter); /* returns max count */
 
 #endif /* DB_H */

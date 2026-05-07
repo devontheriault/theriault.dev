@@ -6,6 +6,8 @@ const POLL_INTERVAL_MS = 5000;
 let activeCountry = null;
 
 /* ---- DOM references ---- */
+const elHeatmapGrid      = document.getElementById('heatmap-grid');
+const elHeatmapHourLabels = document.getElementById('heatmap-hour-labels');
 const elTotalVisits      = document.getElementById('total-visits');
 const elUniqueCountries  = document.getElementById('unique-countries');
 const elCountryList      = document.getElementById('country-list');
@@ -104,6 +106,48 @@ function renderStats(data) {
     setOk();
 }
 
+/* ---- Heatmap ---- */
+function renderHeatmap(data) {
+    if (!elHeatmapGrid) return;
+
+    if (elHeatmapHourLabels && elHeatmapHourLabels.childElementCount === 0) {
+        for (var h = 0; h < 24; h++) {
+            var lbl = document.createElement('span');
+            lbl.textContent = h % 3 === 0 ? String(h).padStart(2, '0') : '';
+            elHeatmapHourLabels.appendChild(lbl);
+        }
+    }
+
+    var max = data.max || 1;
+    var cells = elHeatmapGrid.children;
+    var needsBuild = cells.length !== 7 * 24;
+
+    if (needsBuild) elHeatmapGrid.innerHTML = '';
+
+    for (var d = 0; d < 7; d++) {
+        for (var h = 0; h < 24; h++) {
+            var count = (data.data[d] || [])[h] || 0;
+            var intensity = max > 0 ? count / max : 0;
+            var cell = needsBuild ? document.createElement('div') : cells[d * 24 + h];
+            cell.className = 'heatmap-cell';
+            cell.style.background = 'rgba(88,166,255,' + (0.08 + intensity * 0.92).toFixed(3) + ')';
+            cell.title = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d] + ' ' +
+                String(h).padStart(2,'0') + ':00 — ' + count + ' visit' + (count !== 1 ? 's' : '');
+            if (needsBuild) elHeatmapGrid.appendChild(cell);
+        }
+    }
+}
+
+function fetchHeatmap() {
+    var url = activeCountry
+        ? '/heatmap?country=' + encodeURIComponent(activeCountry)
+        : '/heatmap';
+    fetch(url)
+        .then(function(res) { return res.json(); })
+        .then(renderHeatmap)
+        .catch(function(err) { console.error('[app] /heatmap fetch failed:', err); });
+}
+
 /* ---- Fetch ---- */
 function fetchStats() {
     const url = activeCountry
@@ -132,6 +176,7 @@ if (elCountryList) {
         const country = item.getAttribute('data-country');
         activeCountry = (activeCountry === country) ? null : country;
         fetchStats();
+        fetchHeatmap();
     });
 }
 
@@ -139,9 +184,12 @@ if (elFilterClear) {
     elFilterClear.addEventListener('click', function() {
         activeCountry = null;
         fetchStats();
+        fetchHeatmap();
     });
 }
 
 /* ---- Bootstrap ---- */
 fetchStats();
+fetchHeatmap();
 setInterval(fetchStats, POLL_INTERVAL_MS);
+setInterval(fetchHeatmap, POLL_INTERVAL_MS);
