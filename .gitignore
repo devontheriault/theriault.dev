@@ -10,3 +10,5 @@ data/
 claude.md
 
 server
+
+.claude/
