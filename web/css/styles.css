@@ -182,6 +182,27 @@ header h1 span {
 }
 
 
+.three-col-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    background: none;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    margin-bottom: 1.5rem;
+}
+
+.three-col-row .section {
+    margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+    .three-col-row {
+        grid-template-columns: 1fr;
+    }
+}
+
 .section-header {
     display: flex;
     align-items: center;

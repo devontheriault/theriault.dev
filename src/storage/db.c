@@ -1,4 +1,5 @@
 #include "db.h"
+#include "../utils/ua_parser.h"
 #include <sqlite3.h>
 #include <stdio.h>
 #include <string.h>
@@ -33,8 +34,11 @@ int db_init(void) {
     }
 
     /* Migrations — silently ignored if columns already exist */
-    sqlite3_exec(g_db, "ALTER TABLE visits ADD COLUMN lat REAL", NULL, NULL, NULL);
-    sqlite3_exec(g_db, "ALTER TABLE visits ADD COLUMN lng REAL", NULL, NULL, NULL);
+    sqlite3_exec(g_db, "ALTER TABLE visits ADD COLUMN lat REAL",          NULL, NULL, NULL);
+    sqlite3_exec(g_db, "ALTER TABLE visits ADD COLUMN lng REAL",          NULL, NULL, NULL);
+    sqlite3_exec(g_db, "ALTER TABLE visits ADD COLUMN browser TEXT",      NULL, NULL, NULL);
+    sqlite3_exec(g_db, "ALTER TABLE visits ADD COLUMN device_type TEXT",  NULL, NULL, NULL);
+    sqlite3_exec(g_db, "ALTER TABLE visits ADD COLUMN os TEXT",           NULL, NULL, NULL);
     sqlite3_exec(g_db, "ALTER TABLE ip_ranges ADD COLUMN latitude REAL DEFAULT 0", NULL, NULL, NULL);
     sqlite3_exec(g_db, "ALTER TABLE ip_ranges ADD COLUMN longitude REAL DEFAULT 0", NULL, NULL, NULL);
     /* Index so city-name coord fallback queries are fast */
@@ -56,7 +60,12 @@ void db_close(void) {
 int db_insert_visit(const char *ip, const char *country, const char *city, const char *user_agent, double lat, double lng) {
     if (!g_db) return -1;
 
-    const char *sql = "INSERT INTO visits (ip, country, city, user_agent, lat, lng) VALUES (?, ?, ?, ?, ?, ?);";
+    char browser[32], device_type[32], os[32];
+    ua_parse(user_agent, browser, device_type, os);
+
+    const char *sql =
+        "INSERT INTO visits (ip, country, city, user_agent, lat, lng, browser, device_type, os)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);";
     sqlite3_stmt *stmt = NULL;
 
     int rc = sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL);
@@ -65,12 +74,15 @@ int db_insert_visit(const char *ip, const char *country, const char *city, const
         return -1;
     }
 
-    sqlite3_bind_text(stmt,   1, ip,         -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt,   2, country,    -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt,   3, city,       -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt,   4, user_agent, -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt,   1, ip,          -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt,   2, country,     -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt,   3, city,        -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt,   4, user_agent,  -1, SQLITE_STATIC);
     sqlite3_bind_double(stmt, 5, lat);
     sqlite3_bind_double(stmt, 6, lng);
+    sqlite3_bind_text(stmt,   7, browser,     -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt,   8, device_type, -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt,   9, os,          -1, SQLITE_TRANSIENT);
 
     rc = sqlite3_step(stmt);
     sqlite3_finalize(stmt);
@@ -299,6 +311,92 @@ int db_get_heatmap_data(int counts[7][24], const char *country_filter, const cha
 
     sqlite3_finalize(stmt);
     return max_count;
+}
+
+static int device_query(const char *sql_all, const char *sql_country, const char *sql_city,
+                         const char *sql_both, const char *fallback,
+                         const char *country_filter, const char *city_filter,
+                         char names[][32], int counts[], int max_n) {
+    int has_country = country_filter && country_filter[0] != '\0';
+    int has_city    = city_filter    && city_filter[0]    != '\0';
+
+    const char *sql;
+    if      (has_country && has_city) sql = sql_both;
+    else if (has_country)             sql = sql_country;
+    else if (has_city)                sql = sql_city;
+    else                              sql = sql_all;
+
+    sqlite3_stmt *stmt = NULL;
+    if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK)
+        return 0;
+
+    if (has_country && has_city) {
+        sqlite3_bind_text(stmt, 1, country_filter, -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 2, city_filter,    -1, SQLITE_STATIC);
+        sqlite3_bind_int (stmt, 3, max_n);
+    } else if (has_country || has_city) {
+        sqlite3_bind_text(stmt, 1, has_country ? country_filter : city_filter, -1, SQLITE_STATIC);
+        sqlite3_bind_int (stmt, 2, max_n);
+    } else {
+        sqlite3_bind_int(stmt, 1, max_n);
+    }
+
+    int n = 0;
+    while (sqlite3_step(stmt) == SQLITE_ROW && n < max_n) {
+        const char *name = (const char *)sqlite3_column_text(stmt, 0);
+        strncpy(names[n], name ? name : fallback, 31);
+        names[n][31] = '\0';
+        counts[n] = sqlite3_column_int(stmt, 1);
+        n++;
+    }
+
+    sqlite3_finalize(stmt);
+    return n;
+}
+
+int db_get_top_browsers(char names[][32], int counts[], int max_n,
+                        const char *country_filter, const char *city_filter) {
+    if (!g_db || max_n <= 0) return 0;
+    return device_query(
+        "SELECT COALESCE(browser,'Other') as b, COUNT(*) as cnt FROM visits"
+        " WHERE country NOT IN ('Unknown','Localhost','Local','','-') GROUP BY b ORDER BY cnt DESC LIMIT ?",
+        "SELECT COALESCE(browser,'Other') as b, COUNT(*) as cnt FROM visits"
+        " WHERE country=? GROUP BY b ORDER BY cnt DESC LIMIT ?",
+        "SELECT COALESCE(browser,'Other') as b, COUNT(*) as cnt FROM visits"
+        " WHERE city=? GROUP BY b ORDER BY cnt DESC LIMIT ?",
+        "SELECT COALESCE(browser,'Other') as b, COUNT(*) as cnt FROM visits"
+        " WHERE country=? AND city=? GROUP BY b ORDER BY cnt DESC LIMIT ?",
+        "Other", country_filter, city_filter, names, counts, max_n);
+}
+
+int db_get_device_breakdown(char names[][32], int counts[], int max_n,
+                            const char *country_filter, const char *city_filter) {
+    if (!g_db || max_n <= 0) return 0;
+    return device_query(
+        "SELECT COALESCE(device_type,'Desktop') as d, COUNT(*) as cnt FROM visits"
+        " WHERE country NOT IN ('Unknown','Localhost','Local','','-') GROUP BY d ORDER BY cnt DESC LIMIT ?",
+        "SELECT COALESCE(device_type,'Desktop') as d, COUNT(*) as cnt FROM visits"
+        " WHERE country=? GROUP BY d ORDER BY cnt DESC LIMIT ?",
+        "SELECT COALESCE(device_type,'Desktop') as d, COUNT(*) as cnt FROM visits"
+        " WHERE city=? GROUP BY d ORDER BY cnt DESC LIMIT ?",
+        "SELECT COALESCE(device_type,'Desktop') as d, COUNT(*) as cnt FROM visits"
+        " WHERE country=? AND city=? GROUP BY d ORDER BY cnt DESC LIMIT ?",
+        "Desktop", country_filter, city_filter, names, counts, max_n);
+}
+
+int db_get_top_os(char names[][32], int counts[], int max_n,
+                  const char *country_filter, const char *city_filter) {
+    if (!g_db || max_n <= 0) return 0;
+    return device_query(
+        "SELECT COALESCE(os,'Unknown') as o, COUNT(*) as cnt FROM visits"
+        " WHERE country NOT IN ('Unknown','Localhost','Local','','-') GROUP BY o ORDER BY cnt DESC LIMIT ?",
+        "SELECT COALESCE(os,'Unknown') as o, COUNT(*) as cnt FROM visits"
+        " WHERE country=? GROUP BY o ORDER BY cnt DESC LIMIT ?",
+        "SELECT COALESCE(os,'Unknown') as o, COUNT(*) as cnt FROM visits"
+        " WHERE city=? GROUP BY o ORDER BY cnt DESC LIMIT ?",
+        "SELECT COALESCE(os,'Unknown') as o, COUNT(*) as cnt FROM visits"
+        " WHERE country=? AND city=? GROUP BY o ORDER BY cnt DESC LIMIT ?",
+        "Unknown", country_filter, city_filter, names, counts, max_n);
 }
 
 int db_get_top_cities(char names[][64], int counts[], int max_n, const char *country_filter) {

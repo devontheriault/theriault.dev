@@ -79,7 +79,7 @@ static int sse_build_json(char *buf, size_t size) {
     int pos = 0;
 
     /* --- Stats (no country filter) --- */
-    StatsResult stats = analytics_get_stats("");
+    StatsResult stats = analytics_get_stats("", "");
     pos += snprintf(buf + pos, size - (size_t)pos,
         "{\"stats\":{"
         "\"total_visits\":%d,"
@@ -103,6 +103,34 @@ static int sse_build_json(char *buf, size_t size) {
             "%s{\"city\":\"%s\",\"count\":%d}",
             i > 0 ? "," : "", esc, stats.city_counts[i]);
     }
+
+    pos += snprintf(buf + pos, size - (size_t)pos, "],\"browsers\":[");
+    for (int i = 0; i < stats.browser_len && pos < (int)size - 64; i++) {
+        char esc[64];
+        json_string_escape(stats.top_browsers[i], esc, sizeof(esc));
+        pos += snprintf(buf + pos, size - (size_t)pos,
+            "%s{\"browser\":\"%s\",\"count\":%d}",
+            i > 0 ? "," : "", esc, stats.browser_counts[i]);
+    }
+
+    pos += snprintf(buf + pos, size - (size_t)pos, "],\"device_types\":[");
+    for (int i = 0; i < stats.device_type_len && pos < (int)size - 64; i++) {
+        char esc[64];
+        json_string_escape(stats.device_types[i], esc, sizeof(esc));
+        pos += snprintf(buf + pos, size - (size_t)pos,
+            "%s{\"device_type\":\"%s\",\"count\":%d}",
+            i > 0 ? "," : "", esc, stats.device_type_counts[i]);
+    }
+
+    pos += snprintf(buf + pos, size - (size_t)pos, "],\"os\":[");
+    for (int i = 0; i < stats.os_len && pos < (int)size - 64; i++) {
+        char esc[64];
+        json_string_escape(stats.top_os[i], esc, sizeof(esc));
+        pos += snprintf(buf + pos, size - (size_t)pos,
+            "%s{\"os\":\"%s\",\"count\":%d}",
+            i > 0 ? "," : "", esc, stats.os_counts[i]);
+    }
+
     pos += snprintf(buf + pos, size - (size_t)pos,
         "],\"active_country\":\"\"}");
 

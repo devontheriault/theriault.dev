@@ -32,9 +32,11 @@ static void parse_query_param(const char *path, const char *key,
 
 void handle_stats(int client_fd, const HttpRequest *req) {
     char country_filter[64] = {0};
+    char city_filter[64]    = {0};
     parse_query_param(req->path, "country", country_filter, sizeof(country_filter));
+    parse_query_param(req->path, "city",    city_filter,    sizeof(city_filter));
 
-    StatsResult stats = analytics_get_stats(country_filter);
+    StatsResult stats = analytics_get_stats(country_filter, city_filter);
 
     /* Build the JSON body */
     char body[32768];
@@ -68,6 +70,33 @@ void handle_stats(int client_fd, const HttpRequest *req) {
             (i > 0) ? "," : "",
             escaped,
             stats.city_counts[i]);
+    }
+
+    pos += snprintf(body + pos, sizeof(body) - (size_t)pos, "],\"browsers\":[");
+    for (int i = 0; i < stats.browser_len && pos < (int)sizeof(body) - 64; i++) {
+        char escaped[64];
+        json_string_escape(stats.top_browsers[i], escaped, sizeof(escaped));
+        pos += snprintf(body + pos, sizeof(body) - (size_t)pos,
+            "%s{\"browser\":\"%s\",\"count\":%d}",
+            (i > 0) ? "," : "", escaped, stats.browser_counts[i]);
+    }
+
+    pos += snprintf(body + pos, sizeof(body) - (size_t)pos, "],\"device_types\":[");
+    for (int i = 0; i < stats.device_type_len && pos < (int)sizeof(body) - 64; i++) {
+        char escaped[64];
+        json_string_escape(stats.device_types[i], escaped, sizeof(escaped));
+        pos += snprintf(body + pos, sizeof(body) - (size_t)pos,
+            "%s{\"device_type\":\"%s\",\"count\":%d}",
+            (i > 0) ? "," : "", escaped, stats.device_type_counts[i]);
+    }
+
+    pos += snprintf(body + pos, sizeof(body) - (size_t)pos, "],\"os\":[");
+    for (int i = 0; i < stats.os_len && pos < (int)sizeof(body) - 64; i++) {
+        char escaped[64];
+        json_string_escape(stats.top_os[i], escaped, sizeof(escaped));
+        pos += snprintf(body + pos, sizeof(body) - (size_t)pos,
+            "%s{\"os\":\"%s\",\"count\":%d}",
+            (i > 0) ? "," : "", escaped, stats.os_counts[i]);
     }
 
     char escaped_country[128];

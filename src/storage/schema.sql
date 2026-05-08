@@ -4,5 +4,8 @@ CREATE TABLE IF NOT EXISTS visits (
     country TEXT,
     city TEXT,
     user_agent TEXT,
-    timestamp DATETIME
+    timestamp DATETIME,
+    browser TEXT,
+    device_type TEXT,
+    os TEXT
 );

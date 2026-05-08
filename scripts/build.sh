@@ -27,6 +27,7 @@ SRCS=(
     src/storage/db.c
     src/utils/json.c
     src/utils/net.c
+    src/utils/ua_parser.c
 )
 
 echo "==> Building visitor-tracker server..."

@@ -21,6 +21,9 @@ const elHeatmapCountryLabel = document.getElementById('heatmap-country-label');
 const elHeatmapCityClear    = document.getElementById('heatmap-city-clear');
 const elHeatmapCityLabel    = document.getElementById('heatmap-city-label');
 const elStatusDot           = document.getElementById('status-dot');
+const elBrowserList         = document.getElementById('browser-list');
+const elDeviceList          = document.getElementById('device-list');
+const elOsList              = document.getElementById('os-list');
 
 /* ---- Filter UI ---- */
 function updateFilterUI() {
@@ -148,6 +151,16 @@ function renderStats(data) {
         renderBarList(elCityList, cities, 'city', activeCity);
     }
 
+    if (elBrowserList) {
+        renderBarList(elBrowserList, data.browsers || [], 'browser', null);
+    }
+    if (elDeviceList) {
+        renderBarList(elDeviceList, data.device_types || [], 'device_type', null);
+    }
+    if (elOsList) {
+        renderBarList(elOsList, data.os || [], 'os', null);
+    }
+
     updateFilterUI();
     setOk();
 }
@@ -197,9 +210,10 @@ function fetchHeatmap() {
 
 /* ---- Fetch ---- */
 function fetchStats() {
-    const url = activeCountry
-        ? '/stats?country=' + encodeURIComponent(activeCountry)
-        : '/stats';
+    var params = [];
+    if (activeCountry) params.push('country=' + encodeURIComponent(activeCountry));
+    if (activeCity)    params.push('city='    + encodeURIComponent(activeCity));
+    var url = '/stats' + (params.length ? '?' + params.join('&') : '');
 
     fetch(url)
         .then(function(res) {
@@ -240,6 +254,7 @@ if (elCityList) {
             el.classList.toggle('active', el.getAttribute('data-city') === activeCity);
         });
         updateFilterUI();
+        fetchStats();
         fetchHeatmap();
     });
 }
@@ -271,6 +286,7 @@ if (elHeatmapCityClear) {
     elHeatmapCityClear.addEventListener('click', function() {
         activeCity = null;
         updateFilterUI();
+        fetchStats();
         fetchHeatmap();
     });
 }
@@ -321,8 +337,8 @@ fetchHeatmap();
     es.onmessage = function (e) {
         try {
             var payload = JSON.parse(e.data);
-            /* Only overwrite stats/heatmap when no country filter is active */
-            if (!activeCountry) {
+            /* Only overwrite stats/heatmap when no filter is active */
+            if (!activeCountry && !activeCity) {
                 if (payload.stats)   renderStats(payload.stats);
                 if (payload.heatmap) renderHeatmap(payload.heatmap);
             }
