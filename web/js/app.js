@@ -19,6 +19,37 @@ const elHeatmapFilterClear = document.getElementById('heatmap-filter-clear');
 const elHeatmapFilterLabel = document.getElementById('heatmap-filter-label');
 const elStatusDot        = document.getElementById('status-dot');
 
+/* ---- Tooltip ---- */
+const tooltip = document.createElement('div');
+tooltip.className = 'tooltip';
+document.body.appendChild(tooltip);
+
+let _ttVisible = false;
+
+function showTooltip(html, e) {
+    tooltip.innerHTML = html;
+    tooltip.style.display = 'block';
+    _ttVisible = true;
+    moveTooltip(e);
+}
+
+function hideTooltip() {
+    tooltip.style.display = 'none';
+    _ttVisible = false;
+}
+
+function moveTooltip(e) {
+    if (!_ttVisible) return;
+    const pad = 14;
+    const x = e.clientX + pad;
+    const y = e.clientY - 10;
+    const tw = tooltip.offsetWidth, th = tooltip.offsetHeight;
+    tooltip.style.left = (x + tw > window.innerWidth  ? e.clientX - tw - pad : x) + 'px';
+    tooltip.style.top  = (y + th > window.innerHeight ? e.clientY - th - pad : y) + 'px';
+}
+
+document.addEventListener('mousemove', moveTooltip);
+
 /* ---- Helpers ---- */
 function formatNumber(n) {
     return Number(n).toLocaleString();
@@ -59,7 +90,7 @@ function renderBarList(container, items, nameKey, activeValue) {
             (isClickable ? ' clickable' : '') +
             (isActive    ? ' active'    : '');
         return (
-            '<div class="' + classes + '" data-' + nameKey + '="' + safeName + '">' +
+            '<div class="' + classes + '" data-' + nameKey + '="' + safeName + '" data-count="' + item.count + '" data-pct="' + pct + '">' +
             '  <span class="country-name" title="' + safeName + '">' + safeName + '</span>' +
             '  <div class="bar-wrap">' +
             '    <div class="bar-fill" style="width:' + pct + '%"></div>' +
@@ -126,7 +157,7 @@ function renderHeatmap(data) {
             var cell = needsBuild ? document.createElement('div') : cells[d * 24 + h];
             cell.className = 'heatmap-cell';
             cell.style.background = 'rgba(88,166,255,' + (0.08 + intensity * 0.92).toFixed(3) + ')';
-            cell.title = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d] + ' ' +
+            cell.dataset.tooltip = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d] + ' ' +
                 String(h).padStart(2,'0') + ':00 — ' + count + ' visit' + (count !== 1 ? 's' : '');
             if (needsBuild) elHeatmapGrid.appendChild(cell);
         }
@@ -190,6 +221,41 @@ if (elHeatmapFilterClear) {
         fetchHeatmap();
     });
 }
+
+/* ---- Tooltip wiring ---- */
+function wireBarTooltips(container, nameKey) {
+    container.addEventListener('mouseover', function(e) {
+        const item = e.target.closest('.country-item');
+        if (!item) return;
+        const name  = item.dataset[nameKey] || '';
+        const count = item.dataset.count || '0';
+        showTooltip('<strong>' + escapeHtml(name) + '</strong><br>' + formatNumber(Number(count)) + ' visits', e);
+    });
+    container.addEventListener('mouseout', function(e) {
+        if (!e.target.closest('.country-item')) return;
+        hideTooltip();
+    });
+}
+
+if (elCountryList) wireBarTooltips(elCountryList, 'country');
+if (elCityList)    wireBarTooltips(elCityList,    'city');
+
+if (elHeatmapGrid) {
+    elHeatmapGrid.addEventListener('mouseover', function(e) {
+        const cell = e.target.closest('.heatmap-cell');
+        if (!cell || !cell.dataset.tooltip) return;
+        showTooltip(cell.dataset.tooltip, e);
+    });
+    elHeatmapGrid.addEventListener('mouseout', function(e) {
+        if (!e.target.closest('.heatmap-cell')) return;
+        hideTooltip();
+    });
+}
+
+document.querySelectorAll('.card[data-tooltip]').forEach(function(card) {
+    card.addEventListener('mouseenter', function(e) { showTooltip(card.dataset.tooltip, e); });
+    card.addEventListener('mouseleave', hideTooltip);
+});
 
 /* ---- Bootstrap ---- */
 fetchStats();

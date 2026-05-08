@@ -38,9 +38,10 @@
         .pointLat('lat')
         .pointLng('lng')
         .pointColor('color')
-        .pointAltitude(0)
+        .pointAltitude('altitude')
         .pointRadius('radius')
         .pointLabel(function (d) {
+            if (!d.isHover) return '';
             var label = d.country ? d.city + ', ' + d.country : d.city;
             return '<div style="font-size:0.8rem;background:#1c2230;padding:4px 8px;border-radius:6px;border:1px solid #30363d">' +
                 '<strong>' + label + '</strong><br>' + d.count.toLocaleString() + ' visits</div>';
@@ -93,7 +94,19 @@
                 count:   c.count,
                 color:   color,
             };
-            dots.push(Object.assign({}, base, { radius: 0.2 + t * 0.5 }));
+            // Large nearly-invisible dot at higher altitude — intercepts raycaster for hover
+            dots.push(Object.assign({}, base, {
+                radius: 0.45 + t * 0.7,
+                altitude: 0.006,
+                color: color.replace('rgb(', 'rgba(').replace(')', ',0.04)'),
+                isHover: true,
+            }));
+            // Small bright dot at lower altitude — visual only
+            dots.push(Object.assign({}, base, {
+                radius: 0.18 + t * 0.28,
+                altitude: 0.001,
+                isHover: false,
+            }));
             rings.push(Object.assign({}, base, {
                 maxRadius: 1.5 + t * 3.5,
                 speed:     0.8 + t * 1.5,

@@ -233,6 +233,16 @@ header h1 span {
     display: flex;
     align-items: center;
     gap: 0.75rem;
+    transition: transform 0.15s ease;
+}
+
+.country-item:hover {
+    transform: translateX(6px);
+}
+
+.country-item:hover .bar-fill {
+    filter: brightness(1.5);
+    box-shadow: 0 0 10px rgba(88, 166, 255, 0.45);
 }
 
 .country-name {
@@ -397,12 +407,32 @@ footer .tech-note {
     border-radius: 3px;
     min-width: 14px;
     cursor: default;
-    transition: opacity 0.3s;
+    position: relative;
+    transition: transform 0.12s ease, filter 0.12s ease;
 }
 
 .heatmap-cell:hover {
-    opacity: 0.75;
-    outline: 1px solid var(--accent);
+    transform: scale(1.5);
+    filter: brightness(1.6);
+    outline: 1.5px solid var(--accent);
+    z-index: 2;
+}
+
+/* ===== Tooltip ===== */
+.tooltip {
+    position: fixed;
+    display: none;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.45rem 0.75rem;
+    font-size: 0.82rem;
+    color: var(--text-primary);
+    pointer-events: none;
+    z-index: 9999;
+    box-shadow: var(--shadow);
+    white-space: nowrap;
+    line-height: 1.5;
 }
 
 /* ===== Responsive ===== */
