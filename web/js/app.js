@@ -102,8 +102,38 @@ function setOk() {
     if (elStatusDot) elStatusDot.style.background = '#3fb950';
 }
 
+/* ---- Icons ---- */
+const BROWSER_ICONS = {
+    'Chrome':  'fa-brands fa-chrome',
+    'Firefox': 'fa-brands fa-firefox-browser',
+    'Safari':  'fa-brands fa-safari',
+    'Edge':    'fa-brands fa-edge',
+    'Opera':   'fa-brands fa-opera',
+    'Other':   'fa-solid fa-globe',
+};
+
+const OS_ICONS = {
+    'Windows':  'fa-brands fa-windows',
+    'macOS':    'fa-brands fa-apple',
+    'Linux':    'fa-brands fa-linux',
+    'Android':  'fa-brands fa-android',
+    'iOS':      'fa-brands fa-apple',
+    'ChromeOS': 'fa-brands fa-chrome',
+    'Unknown':  'fa-solid fa-circle-question',
+};
+
+const DEVICE_ICONS = {
+    'Desktop': 'fa-solid fa-desktop',
+    'Mobile':  'fa-solid fa-mobile-screen',
+    'Tablet':  'fa-solid fa-tablet-screen-button',
+};
+
+function browserIcon(name)  { return BROWSER_ICONS[name] || 'fa-solid fa-globe'; }
+function osIcon(name)       { return OS_ICONS[name]       || 'fa-solid fa-circle-question'; }
+function deviceIcon(name)   { return DEVICE_ICONS[name]   || 'fa-solid fa-desktop'; }
+
 /* ---- Render ---- */
-function renderBarList(container, items, nameKey, activeValue) {
+function renderBarList(container, items, nameKey, activeValue, iconFn) {
     if (items.length === 0) {
         container.innerHTML = '<p class="empty-state">No data recorded yet.</p>';
         return;
@@ -119,8 +149,12 @@ function renderBarList(container, items, nameKey, activeValue) {
         const classes = 'country-item' +
             (isClickable ? ' clickable' : '') +
             (isActive    ? ' active'    : '');
+        const icon = iconFn
+            ? '<i class="item-icon ' + escapeHtml(iconFn(name)) + '" aria-hidden="true"></i>'
+            : '';
         return (
             '<div class="' + classes + '" data-' + nameKey + '="' + safeName + '" data-count="' + item.count + '" data-pct="' + pct + '">' +
+            icon +
             '  <span class="country-name" title="' + safeName + '">' + safeName + '</span>' +
             '  <div class="bar-wrap">' +
             '    <div class="bar-fill" style="width:' + pct + '%"></div>' +
@@ -152,13 +186,13 @@ function renderStats(data) {
     }
 
     if (elBrowserList) {
-        renderBarList(elBrowserList, data.browsers || [], 'browser', null);
+        renderBarList(elBrowserList, data.browsers || [], 'browser', null, browserIcon);
     }
     if (elDeviceList) {
-        renderBarList(elDeviceList, data.device_types || [], 'device_type', null);
+        renderBarList(elDeviceList, data.device_types || [], 'device_type', null, deviceIcon);
     }
     if (elOsList) {
-        renderBarList(elOsList, data.os || [], 'os', null);
+        renderBarList(elOsList, data.os || [], 'os', null, osIcon);
     }
 
     updateFilterUI();
