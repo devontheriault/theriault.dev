@@ -17,16 +17,11 @@ const elFilterClear      = document.getElementById('filter-clear');
 const elFilterLabel      = document.getElementById('filter-label');
 const elHeatmapFilterClear = document.getElementById('heatmap-filter-clear');
 const elHeatmapFilterLabel = document.getElementById('heatmap-filter-label');
-const elLastUpdated      = document.getElementById('last-updated');
 const elStatusDot        = document.getElementById('status-dot');
 
 /* ---- Helpers ---- */
 function formatNumber(n) {
     return Number(n).toLocaleString();
-}
-
-function formatTime(d) {
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
 function escapeHtml(s) {
@@ -39,7 +34,7 @@ function escapeHtml(s) {
 
 function setError(msg) {
     if (elStatusDot) elStatusDot.style.background = '#f85149';
-    if (elLastUpdated) elLastUpdated.textContent = 'Error: ' + msg;
+    console.error('[sse]', msg);
 }
 
 function setOk() {
@@ -101,10 +96,6 @@ function renderStats(data) {
         elFilterLabel.textContent = ac;
         elHeatmapFilterClear.style.display = ac ? '' : 'none';
         elHeatmapFilterLabel.textContent = ac;
-    }
-
-    if (elLastUpdated) {
-        elLastUpdated.textContent = 'Last updated: ' + formatTime(new Date());
     }
 
     setOk();

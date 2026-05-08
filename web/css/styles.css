@@ -283,14 +283,6 @@ footer .tech-note {
     opacity: 0.4;
 }
 
-/* ===== Last-updated ===== */
-.last-updated {
-    font-size: 0.73rem;
-    color: var(--text-muted);
-    text-align: right;
-    margin-top: 0.6rem;
-}
-
 /* ===== Globe ===== */
 .globe-section {
     display: flex;
