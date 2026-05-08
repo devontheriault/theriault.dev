@@ -4,6 +4,7 @@ const POLL_INTERVAL_MS = 5000;
 
 /* ---- State ---- */
 let activeCountry = null;
+let activeCity    = null;
 
 /* ---- DOM references ---- */
 const elHeatmapGrid      = document.getElementById('heatmap-grid');
@@ -13,11 +14,37 @@ const elUniqueCountries  = document.getElementById('unique-countries');
 const elCountryList      = document.getElementById('country-list');
 const elCitySection      = document.getElementById('city-section');
 const elCityList         = document.getElementById('city-list');
-const elFilterClear      = document.getElementById('filter-clear');
-const elFilterLabel      = document.getElementById('filter-label');
-const elHeatmapFilterClear = document.getElementById('heatmap-filter-clear');
-const elHeatmapFilterLabel = document.getElementById('heatmap-filter-label');
-const elStatusDot        = document.getElementById('status-dot');
+const elFilterClear         = document.getElementById('filter-clear');
+const elFilterLabel         = document.getElementById('filter-label');
+const elHeatmapCountryClear = document.getElementById('heatmap-country-clear');
+const elHeatmapCountryLabel = document.getElementById('heatmap-country-label');
+const elHeatmapCityClear    = document.getElementById('heatmap-city-clear');
+const elHeatmapCityLabel    = document.getElementById('heatmap-city-label');
+const elStatusDot           = document.getElementById('status-dot');
+
+/* ---- Filter UI ---- */
+function updateFilterUI() {
+    // Top Cities section: shows active country
+    if (elFilterClear && elFilterLabel) {
+        elFilterClear.style.display = activeCountry ? '' : 'none';
+        elFilterLabel.textContent   = activeCountry || '';
+    }
+    // Heatmap: separate country and city badges
+    if (elHeatmapCountryClear && elHeatmapCountryLabel) {
+        elHeatmapCountryClear.style.display = activeCountry ? '' : 'none';
+        elHeatmapCountryLabel.textContent   = activeCountry || '';
+    }
+    if (elHeatmapCityClear && elHeatmapCityLabel) {
+        elHeatmapCityClear.style.display = activeCity ? '' : 'none';
+        elHeatmapCityLabel.textContent   = activeCity || '';
+    }
+    // Also keep city list active highlights in sync
+    if (elCityList) {
+        elCityList.querySelectorAll('.country-item').forEach(function(el) {
+            el.classList.toggle('active', el.getAttribute('data-city') === activeCity);
+        });
+    }
+}
 
 /* ---- Tooltip ---- */
 const tooltip = document.createElement('div');
@@ -79,7 +106,7 @@ function renderBarList(container, items, nameKey, activeValue) {
         return;
     }
     const maxCount = items[0].count || 1;
-    const isClickable = nameKey === 'country';
+    const isClickable = nameKey === 'country' || nameKey === 'city';
 
     container.innerHTML = items.map(function(item) {
         const name = item[nameKey] || '';
@@ -118,17 +145,10 @@ function renderStats(data) {
         elCitySection.style.display = cities.length > 0 ? '' : 'none';
     }
     if (elCityList) {
-        renderBarList(elCityList, cities, 'city', null);
+        renderBarList(elCityList, cities, 'city', activeCity);
     }
 
-    if (elFilterClear && elFilterLabel) {
-        const ac = data.active_country || '';
-        elFilterClear.style.display = ac ? '' : 'none';
-        elFilterLabel.textContent = ac;
-        elHeatmapFilterClear.style.display = ac ? '' : 'none';
-        elHeatmapFilterLabel.textContent = ac;
-    }
-
+    updateFilterUI();
     setOk();
 }
 
@@ -165,9 +185,10 @@ function renderHeatmap(data) {
 }
 
 function fetchHeatmap() {
-    var url = activeCountry
-        ? '/heatmap?country=' + encodeURIComponent(activeCountry)
-        : '/heatmap';
+    var params = [];
+    if (activeCountry) params.push('country=' + encodeURIComponent(activeCountry));
+    if (activeCity)    params.push('city='    + encodeURIComponent(activeCity));
+    var url = '/heatmap' + (params.length ? '?' + params.join('&') : '');
     fetch(url)
         .then(function(res) { return res.json(); })
         .then(renderHeatmap)
@@ -201,23 +222,55 @@ if (elCountryList) {
         if (!item) return;
         const country = item.getAttribute('data-country');
         activeCountry = (activeCountry === country) ? null : country;
+        activeCity = null;
+        updateFilterUI();
         fetchStats();
         fetchHeatmap();
     });
 }
 
+/* ---- City click filter ---- */
+if (elCityList) {
+    elCityList.addEventListener('click', function(e) {
+        const item = e.target.closest('.country-item.clickable');
+        if (!item) return;
+        const city = item.getAttribute('data-city');
+        activeCity = (activeCity === city) ? null : city;
+        elCityList.querySelectorAll('.country-item').forEach(function(el) {
+            el.classList.toggle('active', el.getAttribute('data-city') === activeCity);
+        });
+        updateFilterUI();
+        fetchHeatmap();
+    });
+}
+
+// Clear country (top cities section) → clears both
 if (elFilterClear) {
     elFilterClear.addEventListener('click', function() {
         activeCountry = null;
+        activeCity = null;
+        updateFilterUI();
         fetchStats();
         fetchHeatmap();
     });
 }
 
-if (elHeatmapFilterClear) {
-    elHeatmapFilterClear.addEventListener('click', function() {
+// Clear country (heatmap) → clears both
+if (elHeatmapCountryClear) {
+    elHeatmapCountryClear.addEventListener('click', function() {
         activeCountry = null;
+        activeCity = null;
+        updateFilterUI();
         fetchStats();
+        fetchHeatmap();
+    });
+}
+
+// Clear city (heatmap) → clears city only, country stays
+if (elHeatmapCityClear) {
+    elHeatmapCityClear.addEventListener('click', function() {
+        activeCity = null;
+        updateFilterUI();
         fetchHeatmap();
     });
 }

@@ -56,7 +56,8 @@
         (globeEl);
 
     myGlobe.controls().autoRotate      = true;
-    myGlobe.controls().autoRotateSpeed = 0.08;
+    myGlobe.controls().autoRotateSpeed = 0.06;
+    myGlobe.pointOfView({ lat: 48, lng: -100, altitude: 2.5 });
 
     if (typeof topojson !== 'undefined') {
         fetch('https://unpkg.com/world-atlas@2.0.2/countries-110m.json')

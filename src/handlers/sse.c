@@ -108,7 +108,7 @@ static int sse_build_json(char *buf, size_t size) {
 
     /* --- Heatmap (no country filter) --- */
     int hm[7][24];
-    int hm_max = db_get_heatmap_data(hm, "");
+    int hm_max = db_get_heatmap_data(hm, "", "");
     pos += snprintf(buf + pos, size - (size_t)pos,
         ",\"heatmap\":{\"max\":%d,\"data\":[", hm_max);
     for (int d = 0; d < 7; d++) {

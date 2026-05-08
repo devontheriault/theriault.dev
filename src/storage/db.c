@@ -233,12 +233,13 @@ int db_get_all_countries(char names[][64], int counts[], int max_n) {
     return n;
 }
 
-int db_get_heatmap_data(int counts[7][24], const char *country_filter) {
+int db_get_heatmap_data(int counts[7][24], const char *country_filter, const char *city_filter) {
     if (!g_db) return 0;
 
     memset(counts, 0, 7 * 24 * sizeof(int));
 
-    int has_filter = country_filter && country_filter[0] != '\0';
+    int has_country = country_filter && country_filter[0] != '\0';
+    int has_city    = city_filter    && city_filter[0]    != '\0';
 
     const char *sql_all =
         "SELECT CAST(strftime('%w', timestamp) AS INTEGER) as dow,"
@@ -248,20 +249,42 @@ int db_get_heatmap_data(int counts[7][24], const char *country_filter) {
         "WHERE country NOT IN ('Unknown', 'Localhost', 'Local', '', '-') "
         "GROUP BY dow, hr;";
 
-    const char *sql_filtered =
+    const char *sql_country =
         "SELECT CAST(strftime('%w', timestamp) AS INTEGER) as dow,"
         "       CAST(strftime('%H', timestamp) AS INTEGER) as hr,"
         "       COUNT(*) as cnt "
-        "FROM visits "
-        "WHERE country = ? "
-        "GROUP BY dow, hr;";
+        "FROM visits WHERE country = ? GROUP BY dow, hr;";
+
+    const char *sql_city =
+        "SELECT CAST(strftime('%w', timestamp) AS INTEGER) as dow,"
+        "       CAST(strftime('%H', timestamp) AS INTEGER) as hr,"
+        "       COUNT(*) as cnt "
+        "FROM visits WHERE city = ? GROUP BY dow, hr;";
+
+    const char *sql_both =
+        "SELECT CAST(strftime('%w', timestamp) AS INTEGER) as dow,"
+        "       CAST(strftime('%H', timestamp) AS INTEGER) as hr,"
+        "       COUNT(*) as cnt "
+        "FROM visits WHERE country = ? AND city = ? GROUP BY dow, hr;";
+
+    const char *sql;
+    if      (has_country && has_city) sql = sql_both;
+    else if (has_country)             sql = sql_country;
+    else if (has_city)                sql = sql_city;
+    else                              sql = sql_all;
 
     sqlite3_stmt *stmt = NULL;
-    if (sqlite3_prepare_v2(g_db, has_filter ? sql_filtered : sql_all, -1, &stmt, NULL) != SQLITE_OK)
+    if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK)
         return 0;
 
-    if (has_filter)
+    if (has_country && has_city) {
         sqlite3_bind_text(stmt, 1, country_filter, -1, SQLITE_STATIC);
+        sqlite3_bind_text(stmt, 2, city_filter,    -1, SQLITE_STATIC);
+    } else if (has_country) {
+        sqlite3_bind_text(stmt, 1, country_filter, -1, SQLITE_STATIC);
+    } else if (has_city) {
+        sqlite3_bind_text(stmt, 1, city_filter, -1, SQLITE_STATIC);
+    }
 
     int max_count = 0;
     while (sqlite3_step(stmt) == SQLITE_ROW) {

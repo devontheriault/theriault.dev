@@ -69,13 +69,14 @@
             <div class="section">
                 <div class="section-header">
                     <div class="section-title">Visits by Hour &amp; Day</div>
-                    <button
-                        id="heatmap-filter-clear"
-                        class="filter-clear"
-                        style="display: none"
-                    >
-                        &times; <span id="heatmap-filter-label"></span>
-                    </button>
+                    <div class="filter-badges">
+                        <button id="heatmap-country-clear" class="filter-clear" style="display: none">
+                            &times; <span id="heatmap-country-label"></span>
+                        </button>
+                        <button id="heatmap-city-clear" class="filter-clear" style="display: none">
+                            &times; <span id="heatmap-city-label"></span>
+                        </button>
+                    </div>
                 </div>
                 <div class="heatmap-wrap">
                     <div

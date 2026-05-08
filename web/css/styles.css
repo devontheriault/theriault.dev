@@ -201,6 +201,11 @@ header h1 span {
     margin-bottom: 0;
 }
 
+.filter-badges {
+    display: flex;
+    gap: 0.4rem;
+}
+
 .filter-clear {
     font-size: 0.75rem;
     color: var(--text-muted);
