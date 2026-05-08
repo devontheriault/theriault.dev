@@ -342,6 +342,9 @@ function wireBarTooltips(container, nameKey) {
 
 if (elCountryList) wireBarTooltips(elCountryList, 'country');
 if (elCityList)    wireBarTooltips(elCityList,    'city');
+if (elBrowserList) wireBarTooltips(elBrowserList, 'browser');
+if (elDeviceList)  wireBarTooltips(elDeviceList,  'device_type');
+if (elOsList)      wireBarTooltips(elOsList,       'os');
 
 if (elHeatmapGrid) {
     elHeatmapGrid.addEventListener('mouseover', function(e) {

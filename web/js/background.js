@@ -12,6 +12,7 @@
     const GRAB_RADIUS = 18;
     const R = 88, G = 166, B = 255;
     const TAU = Math.PI * 2;
+    const MAX_PACKETS = 20;
 
     const TIERS = [
         { r: 2.5, weight: 60 },
@@ -30,6 +31,7 @@
     let mouse = { x: -9999, y: -9999 };
     let gridCols, gridRows, grid = [];
     let dots = [];
+    let packets = [];
 
     // Drag state
     let dragged = null;
@@ -56,6 +58,7 @@
         gridRows = Math.ceil(H / CONNECT_DIST) + 1;
         dots = Array.from({ length: Math.round(W * H * DOTS_PER_PX) }, makeDot);
         dragged = null;
+        packets = [];
     }
 
     function dotAtPoint(mx, my) {
@@ -190,6 +193,8 @@
                         const ex = di.x - dj.x, ey = di.y - dj.y;
                         if (ex * ex + ey * ey < CONNECT_DIST_SQ) {
                             ctx.moveTo(di.x, di.y); ctx.lineTo(dj.x, dj.y);
+                            if (packets.length < MAX_PACKETS && Math.random() < 0.003)
+                                packets.push({ a: di, b: dj, t: 0, speed: 0.007 + Math.random() * 0.009 });
                         }
                     }
                     const neighbors = [cx+1,cy, cx-1,cy+1, cx,cy+1, cx+1,cy+1];
@@ -202,6 +207,8 @@
                             const ex = di.x - dj.x, ey = di.y - dj.y;
                             if (ex * ex + ey * ey < CONNECT_DIST_SQ) {
                                 ctx.moveTo(di.x, di.y); ctx.lineTo(dj.x, dj.y);
+                                if (packets.length < MAX_PACKETS && Math.random() < 0.003)
+                                    packets.push({ a: di, b: dj, t: 0, speed: 0.007 + Math.random() * 0.009 });
                             }
                         }
                     }
@@ -210,6 +217,27 @@
         }
         ctx.strokeStyle = `rgba(${R},${G},${B},0.18)`;
         ctx.stroke();
+
+        // Packets (network traffic)
+        for (let i = packets.length - 1; i >= 0; i--) {
+            const p = packets[i];
+            p.t += p.speed;
+            if (p.t >= 1) { packets.splice(i, 1); continue; }
+            for (let s = 4; s >= 0; s--) {
+                const st = Math.max(0, p.t - s * 0.028);
+                const px = p.a.x + (p.b.x - p.a.x) * st;
+                const py = p.a.y + (p.b.y - p.a.y) * st;
+                const frac = 1 - s / 5;
+                ctx.beginPath();
+                ctx.arc(px, py, 2.5 * frac, 0, TAU);
+                ctx.fillStyle = `rgba(${R},${G},${B},${0.9 * frac})`;
+                ctx.shadowColor = `rgba(${R},${G},${B},${0.7 * frac})`;
+                ctx.shadowBlur = 7 * frac;
+                ctx.fill();
+            }
+            ctx.shadowBlur = 0;
+            ctx.shadowColor = 'transparent';
+        }
 
         // Nodes
         for (let i = 0; i < dots.length; i++) {
