@@ -9,14 +9,14 @@
     const MOUSE_FORCE = 5;
     const CONNECT_DIST = 160;
     const CONNECT_DIST_SQ = CONNECT_DIST * CONNECT_DIST;
+    const GRAB_RADIUS = 18;
     const R = 88, G = 166, B = 255;
     const TAU = Math.PI * 2;
 
-    // Node tiers: weight toward small nodes, a few large hubs
     const TIERS = [
-        { r: 2.5,  weight: 60 },
-        { r: 4.5,  weight: 30 },
-        { r: 7,    weight: 10 },
+        { r: 2.5, weight: 60 },
+        { r: 4.5, weight: 30 },
+        { r: 7,   weight: 10 },
     ];
     const TIER_TOTAL = TIERS.reduce((s, t) => s + t.weight, 0);
 
@@ -26,9 +26,15 @@
         return TIERS[0];
     }
 
-    let W, H, mouse = { x: -9999, y: -9999 };
+    let W, H;
+    let mouse = { x: -9999, y: -9999 };
     let gridCols, gridRows, grid = [];
     let dots = [];
+
+    // Drag state
+    let dragged = null;
+    let prevMX = 0, prevMY = 0;
+    let dragVX = 0, dragVY = 0;
 
     function makeDot() {
         const tier = pickTier();
@@ -39,6 +45,7 @@
             vy: (Math.random() - 0.5) * BASE_SPEED * 2,
             r: tier.r,
             proximity: 0,
+            grabbed: false,
         };
     }
 
@@ -48,9 +55,65 @@
         gridCols = Math.ceil(W / CONNECT_DIST) + 1;
         gridRows = Math.ceil(H / CONNECT_DIST) + 1;
         dots = Array.from({ length: Math.round(W * H * DOTS_PER_PX) }, makeDot);
+        dragged = null;
     }
 
-    window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+    function dotAtPoint(mx, my) {
+        let best = null, bestDist = Infinity;
+        for (const d of dots) {
+            const dx = d.x - mx, dy = d.y - my;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < d.r + GRAB_RADIUS && dist < bestDist) {
+                best = d;
+                bestDist = dist;
+            }
+        }
+        return best;
+    }
+
+    window.addEventListener('mousedown', e => {
+        const hit = dotAtPoint(e.clientX, e.clientY);
+        if (hit) {
+            dragged = hit;
+            dragged.grabbed = true;
+            dragged.vx = 0;
+            dragged.vy = 0;
+            prevMX = e.clientX;
+            prevMY = e.clientY;
+            dragVX = 0;
+            dragVY = 0;
+        }
+    });
+
+    window.addEventListener('mousemove', e => {
+        dragVX = e.clientX - prevMX;
+        dragVY = e.clientY - prevMY;
+        prevMX = e.clientX;
+        prevMY = e.clientY;
+        mouse.x = e.clientX;
+        mouse.y = e.clientY;
+
+        if (dragged) {
+            dragged.x = e.clientX;
+            dragged.y = e.clientY;
+        }
+    });
+
+    window.addEventListener('mouseup', () => {
+        if (dragged) {
+            dragged.vx = dragVX * 0.4;
+            dragged.vy = dragVY * 0.4;
+            dragged.grabbed = false;
+            dragged = null;
+        }
+    });
+
+    // Update cursor when hovering over a draggable dot
+    window.addEventListener('mousemove', e => {
+        if (dragged) { document.body.style.cursor = 'grabbing'; return; }
+        document.body.style.cursor = dotAtPoint(e.clientX, e.clientY) ? 'grab' : '';
+    });
+
     window.addEventListener('mouseleave', () => { mouse.x = -9999; mouse.y = -9999; });
     window.addEventListener('resize', resize);
     resize();
@@ -71,9 +134,14 @@
     function step() {
         ctx.clearRect(0, 0, W, H);
 
-        // Physics
         for (let i = 0; i < dots.length; i++) {
             const d = dots[i];
+
+            if (d.grabbed) {
+                d.proximity = 1;
+                continue;
+            }
+
             const dx = d.x - mouse.x, dy = d.y - mouse.y;
             const distSq = dx * dx + dy * dy;
 
@@ -108,7 +176,7 @@
 
         buildGrid();
 
-        // Edges — batch into one path, opacity scales with inverse distance
+        // Edges
         ctx.lineWidth = 1;
         ctx.beginPath();
         for (let cy = 0; cy < gridRows; cy++) {
@@ -121,8 +189,7 @@
                         const dj = dots[cell[b]];
                         const ex = di.x - dj.x, ey = di.y - dj.y;
                         if (ex * ex + ey * ey < CONNECT_DIST_SQ) {
-                            ctx.moveTo(di.x, di.y);
-                            ctx.lineTo(dj.x, dj.y);
+                            ctx.moveTo(di.x, di.y); ctx.lineTo(dj.x, dj.y);
                         }
                     }
                     const neighbors = [cx+1,cy, cx-1,cy+1, cx,cy+1, cx+1,cy+1];
@@ -134,8 +201,7 @@
                             const dj = dots[nc[b]];
                             const ex = di.x - dj.x, ey = di.y - dj.y;
                             if (ex * ex + ey * ey < CONNECT_DIST_SQ) {
-                                ctx.moveTo(di.x, di.y);
-                                ctx.lineTo(dj.x, dj.y);
+                                ctx.moveTo(di.x, di.y); ctx.lineTo(dj.x, dj.y);
                             }
                         }
                     }
@@ -145,7 +211,7 @@
         ctx.strokeStyle = `rgba(${R},${G},${B},0.18)`;
         ctx.stroke();
 
-        // Nodes — draw with fill + ring stroke to look like graph nodes
+        // Nodes
         for (let i = 0; i < dots.length; i++) {
             const d = dots[i];
             const p = d.proximity;
@@ -153,10 +219,9 @@
             const fillAlpha = 0.18 + p * 0.5;
             const strokeAlpha = 0.55 + p * 0.45;
 
-            // Glow for hub nodes or proximity-highlighted nodes
             if (d.r >= 7 || p > 0) {
                 ctx.shadowColor = `rgba(${R},${G},${B},${0.35 + p * 0.4})`;
-                ctx.shadowBlur = r * 2.5;
+                ctx.shadowBlur = d.grabbed ? r * 4 : r * 2.5;
             }
 
             ctx.beginPath();
@@ -164,7 +229,7 @@
             ctx.fillStyle = `rgba(${R},${G},${B},${fillAlpha})`;
             ctx.fill();
             ctx.strokeStyle = `rgba(${R},${G},${B},${strokeAlpha})`;
-            ctx.lineWidth = d.r >= 4.5 ? 1.5 : 1;
+            ctx.lineWidth = d.grabbed ? 2 : (d.r >= 4.5 ? 1.5 : 1);
             ctx.stroke();
 
             if (d.r >= 7 || p > 0) {
