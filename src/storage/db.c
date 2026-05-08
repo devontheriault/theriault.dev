@@ -85,7 +85,7 @@ int db_insert_visit(const char *ip, const char *country, const char *city, const
 int db_get_total_visits(void) {
     if (!g_db) return 0;
 
-    const char *sql = "SELECT COUNT(*) FROM visits WHERE country NOT IN ('Unknown', 'Localhost', 'Local', '');";
+    const char *sql = "SELECT COUNT(*) FROM visits WHERE country NOT IN ('Unknown', 'Localhost', 'Local', '', '-');";
     sqlite3_stmt *stmt = NULL;
 
     if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK)
@@ -102,7 +102,7 @@ int db_get_total_visits(void) {
 int db_get_unique_countries(void) {
     if (!g_db) return 0;
 
-    const char *sql = "SELECT COUNT(DISTINCT country) FROM visits WHERE country NOT IN ('Unknown', 'Localhost', 'Local', '');";
+    const char *sql = "SELECT COUNT(DISTINCT country) FROM visits WHERE country NOT IN ('Unknown', 'Localhost', 'Local', '', '-');";
     sqlite3_stmt *stmt = NULL;
 
     if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK)
@@ -122,7 +122,7 @@ int db_get_top_countries(char names[][64], int counts[], int max_n) {
     const char *sql =
         "SELECT country, COUNT(*) as cnt "
         "FROM visits "
-        "WHERE country NOT IN ('Unknown', 'Localhost', 'Local', '') "
+        "WHERE country NOT IN ('Unknown', 'Localhost', 'Local', '', '-') "
         "GROUP BY country "
         "ORDER BY cnt DESC "
         "LIMIT ?;";
@@ -163,7 +163,7 @@ int db_get_city_globe_data(char cities[][64], char countries[][64], int counts[]
         "    (SELECT r.longitude FROM ip_ranges r WHERE r.city = v.city AND r.country = v.country AND r.longitude != 0 LIMIT 1),"
         "    (SELECT r.longitude FROM ip_ranges r WHERE r.city = v.city AND r.longitude != 0 LIMIT 1)) as clng "
         "FROM visits v "
-        "WHERE v.city NOT IN ('Unknown', 'Localhost', '') "
+        "WHERE v.city NOT IN ('Unknown', 'Localhost', 'Local', '', '-') "
         "GROUP BY v.city, v.country "
         "HAVING clat IS NOT NULL AND (clat != 0 OR clng != 0) "
         "ORDER BY cnt DESC "
@@ -207,7 +207,7 @@ int db_get_all_countries(char names[][64], int counts[], int max_n) {
     const char *sql =
         "SELECT country, COUNT(*) as cnt "
         "FROM visits "
-        "WHERE country NOT IN ('Unknown', 'Localhost', 'Local', '') "
+        "WHERE country NOT IN ('Unknown', 'Localhost', 'Local', '', '-') "
         "GROUP BY country "
         "ORDER BY cnt DESC "
         "LIMIT ?;";
@@ -245,7 +245,7 @@ int db_get_heatmap_data(int counts[7][24], const char *country_filter) {
         "       CAST(strftime('%H', timestamp) AS INTEGER) as hr,"
         "       COUNT(*) as cnt "
         "FROM visits "
-        "WHERE country NOT IN ('Unknown', 'Localhost', 'Local', '') "
+        "WHERE country NOT IN ('Unknown', 'Localhost', 'Local', '', '-') "
         "GROUP BY dow, hr;";
 
     const char *sql_filtered =
@@ -287,7 +287,7 @@ int db_get_top_cities(char names[][64], int counts[], int max_n, const char *cou
     const char *sql_filtered =
         "SELECT city, COUNT(*) as cnt "
         "FROM visits "
-        "WHERE country = ? AND city NOT IN ('Unknown', 'Localhost', 'Local', '') "
+        "WHERE country = ? AND city NOT IN ('Unknown', 'Localhost', 'Local', '', '-') "
         "GROUP BY city "
         "ORDER BY cnt DESC "
         "LIMIT ?;";
@@ -295,7 +295,7 @@ int db_get_top_cities(char names[][64], int counts[], int max_n, const char *cou
     const char *sql_all =
         "SELECT city, COUNT(*) as cnt "
         "FROM visits "
-        "WHERE city NOT IN ('Unknown', 'Localhost', 'Local', '') "
+        "WHERE city NOT IN ('Unknown', 'Localhost', 'Local', '', '-') "
         "GROUP BY city "
         "ORDER BY cnt DESC "
         "LIMIT ?;";

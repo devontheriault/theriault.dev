@@ -1,5 +1,6 @@
 #include "logger.h"
 #include "../storage/db.h"
+#include "../handlers/sse.h"
 #include <stdio.h>
 #include <time.h>
 
@@ -13,5 +14,7 @@ int logger_record(const char *ip, const char *country, const char *city, const c
             tbuf, ip, country, city, user_agent ? user_agent : "");
     fflush(stdout);
 
-    return db_insert_visit(ip, country, city, user_agent, lat, lng);
+    int rc = db_insert_visit(ip, country, city, user_agent, lat, lng);
+    if (rc == 0) sse_broadcast();
+    return rc;
 }

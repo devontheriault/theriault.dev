@@ -2,8 +2,11 @@
 #include "server.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
 
 int main(void) {
+    signal(SIGPIPE, SIG_IGN);
+
     if (db_init() != 0) {
         fprintf(stderr, "[main] Failed to initialise database. Aborting.\n");
         return EXIT_FAILURE;

@@ -189,6 +189,11 @@ header h1 span {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+    max-height: 20rem;
+    overflow-y: auto;
+    padding-right: 0.75rem;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
 }
 
 .country-item {

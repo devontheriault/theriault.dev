@@ -8,7 +8,7 @@ cd "$ROOT"
 
 CC=gcc
 CFLAGS="-Wall -Wextra -Wpedantic -std=c11 -I src"
-LDFLAGS="-lsqlite3"
+LDFLAGS="-lsqlite3 -lpthread"
 TARGET="server"
 
 SRCS=(
@@ -16,6 +16,7 @@ SRCS=(
     src/server.c
     src/router.c
     src/handlers/visit.c
+    src/handlers/sse.c
     src/handlers/stats.c
     src/handlers/health.c
     src/handlers/globe.c

@@ -4,6 +4,7 @@
 #include "handlers/health.h"
 #include "handlers/globe.h"
 #include "handlers/heatmap.h"
+#include "handlers/sse.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -67,37 +68,42 @@ static void serve_static(int client_fd, const char *web_path) {
     free(buf);
 }
 
-void router_dispatch(int client_fd, HttpRequest *req) {
+int router_dispatch(int client_fd, HttpRequest *req) {
     fprintf(stdout, "[router] %s %s  from %s\n",
             req->method, req->path, req->client_ip);
     fflush(stdout);
 
     if (strcmp(req->method, "GET") == 0) {
+        if (strncmp(req->path, "/events", 7) == 0) {
+            handle_sse(client_fd);
+            return 1;  /* fd ownership transferred to SSE thread */
+        }
         if (strncmp(req->path, "/globe", 6) == 0) {
             handle_globe(client_fd, req);
-            return;
+            return 0;
         }
         if (strncmp(req->path, "/stats", 6) == 0) {
             handle_stats(client_fd, req);
-            return;
+            return 0;
         }
         if (strncmp(req->path, "/health", 7) == 0) {
             handle_health(client_fd, req);
-            return;
+            return 0;
         }
         if (strncmp(req->path, "/heatmap", 8) == 0) {
             handle_heatmap(client_fd, req);
-            return;
+            return 0;
         }
         /* Serve static assets (css, js, images) without recording a visit */
         if (strncmp(req->path, "/css/", 5) == 0 ||
             strncmp(req->path, "/js/",  4) == 0 ||
             strncmp(req->path, "/img/", 5) == 0) {
             serve_static(client_fd, req->path);
-            return;
+            return 0;
         }
     }
 
     /* Default: log visit and serve frontend */
     handle_visit(client_fd, req);
+    return 0;
 }

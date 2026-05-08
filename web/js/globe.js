@@ -114,7 +114,6 @@
             .catch(function (e) { console.error('[globe] fetch failed:', e); });
     }
 
-    fetchGlobe();
-    setInterval(fetchGlobe, 30000);
+    window._globeUpdateFn = updateGlobe;
 
 }());

@@ -9,9 +9,9 @@ StatsResult analytics_get_stats(const char *country_filter) {
     result.total_visits     = db_get_total_visits();
     result.unique_countries = db_get_unique_countries();
     result.top_len          = db_get_top_countries(result.top_countries,
-                                                   result.top_counts, 5);
+                                                   result.top_counts, 50);
     result.city_len         = db_get_top_cities(result.top_cities,
-                                                result.city_counts, 10,
+                                                result.city_counts, 50,
                                                 country_filter);
     if (country_filter && country_filter[0] != '\0') {
         strncpy(result.active_country, country_filter, 63);

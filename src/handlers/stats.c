@@ -37,7 +37,7 @@ void handle_stats(int client_fd, const HttpRequest *req) {
     StatsResult stats = analytics_get_stats(country_filter);
 
     /* Build the JSON body */
-    char body[8192];
+    char body[32768];
     int  pos = 0;
 
     pos += snprintf(body + pos, sizeof(body) - (size_t)pos,

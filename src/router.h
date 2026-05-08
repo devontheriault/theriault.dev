@@ -9,6 +9,6 @@ typedef struct {
     char raw[4096];   /* full raw request for header extraction */
 } HttpRequest;
 
-void router_dispatch(int client_fd, HttpRequest *req);
+int router_dispatch(int client_fd, HttpRequest *req);  /* returns 1 if fd kept open (SSE), 0 otherwise */
 
 #endif /* ROUTER_H */

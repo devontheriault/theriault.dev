@@ -203,5 +203,26 @@ if (elHeatmapFilterClear) {
 /* ---- Bootstrap ---- */
 fetchStats();
 fetchHeatmap();
-setInterval(fetchStats, POLL_INTERVAL_MS);
-setInterval(fetchHeatmap, POLL_INTERVAL_MS);
+
+/* ---- SSE: push updates on each new visit ---- */
+(function () {
+    var es = new EventSource('/events');
+
+    es.onmessage = function (e) {
+        try {
+            var payload = JSON.parse(e.data);
+            /* Only overwrite stats/heatmap when no country filter is active */
+            if (!activeCountry) {
+                if (payload.stats)   renderStats(payload.stats);
+                if (payload.heatmap) renderHeatmap(payload.heatmap);
+            }
+            if (payload.globe && window._globeUpdateFn)
+                window._globeUpdateFn(payload.globe);
+        } catch (err) {
+            console.error('[sse] parse error:', err);
+        }
+    };
+
+    es.onerror = function () { setError('SSE disconnected — reconnecting…'); };
+    es.onopen  = function () { setOk(); };
+}());
