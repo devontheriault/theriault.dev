@@ -384,6 +384,7 @@ footer .tech-note {
 }
 
 #globe-container {
+    position: relative;
     width: 100%;
     height: 500px;
     border-radius: var(--radius);
@@ -392,6 +393,34 @@ footer .tech-note {
     display: flex;
     justify-content: center;
     align-items: center;
+}
+
+#globe-loader {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #000510;
+    z-index: 10;
+    transition: opacity 0.6s ease;
+}
+
+#globe-loader.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.globe-icon {
+    width: 54px;
+    height: 54px;
+    animation: globe-spin 3s linear infinite;
+    filter: drop-shadow(0 0 8px rgba(79, 195, 247, 0.35));
+    transform-origin: center;
+}
+
+@keyframes globe-spin {
+    to { transform: rotate(360deg); }
 }
 
 #globe-container > div {

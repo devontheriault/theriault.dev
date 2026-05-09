@@ -78,6 +78,12 @@
         var cities = data.cities || [];
         if (!cities.length) return;
 
+        var loader = document.getElementById('globe-loader');
+        if (loader) {
+            loader.classList.add('hidden');
+            setTimeout(function () { loader.remove(); }, 650);
+        }
+
         var maxCount = cities.reduce(function (m, c) { return Math.max(m, c.count); }, 1);
 
         var dots  = [];

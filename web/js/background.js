@@ -221,6 +221,8 @@
         // Packets (network traffic)
         for (let i = packets.length - 1; i >= 0; i--) {
             const p = packets[i];
+            const ex = p.a.x - p.b.x, ey = p.a.y - p.b.y;
+            if (ex * ex + ey * ey > CONNECT_DIST_SQ) { packets.splice(i, 1); continue; }
             p.t += p.speed;
             if (p.t >= 1) { packets.splice(i, 1); continue; }
             for (let s = 4; s >= 0; s--) {
