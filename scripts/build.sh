@@ -19,6 +19,7 @@ SRCS=(
     src/handlers/sse.c
     src/handlers/stats.c
     src/handlers/health.c
+    src/handlers/me.c
     src/handlers/globe.c
     src/handlers/heatmap.c
     src/services/logger.c

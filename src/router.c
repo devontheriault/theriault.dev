@@ -5,6 +5,7 @@
 #include "handlers/globe.h"
 #include "handlers/heatmap.h"
 #include "handlers/sse.h"
+#include "handlers/me.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -92,6 +93,10 @@ int router_dispatch(int client_fd, HttpRequest *req) {
         }
         if (strncmp(req->path, "/heatmap", 8) == 0) {
             handle_heatmap(client_fd, req);
+            return 0;
+        }
+        if (strncmp(req->path, "/me", 3) == 0 && req->path[3] == '\0') {
+            handle_me(client_fd, req);
             return 0;
         }
         /* Serve static assets (css, js, images) without recording a visit */

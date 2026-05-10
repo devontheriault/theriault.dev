@@ -192,6 +192,31 @@ header h1 span {
     margin-bottom: 1.5rem;
 }
 
+/* ===== Your Visit ===== */
+.your-visit-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1rem;
+}
+
+.your-visit-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.your-visit-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+}
+
+.your-visit-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
 
 .three-col-row {
     display: grid;

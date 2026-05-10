@@ -363,6 +363,31 @@ document.querySelectorAll('.card[data-tooltip]').forEach(function(card) {
     card.addEventListener('mouseleave', hideTooltip);
 });
 
+/* ---- Your Visit ---- */
+(function () {
+    fetch('/me')
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            var loc = [data.city, data.country].filter(Boolean).join(', ') || '—';
+            var el;
+            el = document.getElementById('your-location');
+            if (el) el.textContent = loc;
+            el = document.getElementById('your-browser');
+            if (el) {
+                el.innerHTML = '<i class="' + escapeHtml(browserIcon(data.browser)) + '" aria-hidden="true"></i> ' + escapeHtml(data.browser || '—');
+            }
+            el = document.getElementById('your-device');
+            if (el) {
+                el.innerHTML = '<i class="' + escapeHtml(deviceIcon(data.device_type)) + '" aria-hidden="true"></i> ' + escapeHtml(data.device_type || '—');
+            }
+            el = document.getElementById('your-os');
+            if (el) {
+                el.innerHTML = '<i class="' + escapeHtml(osIcon(data.os)) + '" aria-hidden="true"></i> ' + escapeHtml(data.os || '—');
+            }
+        })
+        .catch(function(err) { console.error('[app] /me fetch failed:', err); });
+}());
+
 /* ---- Bootstrap ---- */
 fetchStats();
 fetchHeatmap();
