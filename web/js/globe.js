@@ -101,15 +101,19 @@
             .catch(function (e) { console.warn('[globe] country outlines failed:', e); });
     }
 
-    function updateGlobe(data) {
-        var cities = data.cities || [];
-        if (!cities.length) return;
-
+    function dismissLoader() {
         var loader = document.getElementById('globe-loader');
         if (loader) {
             loader.classList.add('hidden');
             setTimeout(function () { loader.remove(); }, 650);
         }
+    }
+
+    function updateGlobe(data) {
+        var cities = data.cities || [];
+        if (!cities.length) return;
+
+        dismissLoader();
 
         var maxCount = cities.reduce(function (m, c) { return Math.max(m, c.count); }, 1);
 
@@ -151,17 +155,38 @@
         myGlobe.pointsData(dots).ringsData(rings);
     }
 
-    function fetchGlobe() {
+    var _globeDataLoaded = false;
+
+    function fetchGlobe(attempt) {
+        attempt = attempt || 1;
         fetch('/globe')
             .then(function (r) {
                 if (!r.ok) throw new Error('HTTP ' + r.status);
                 return r.json();
             })
-            .then(updateGlobe)
-            .catch(function (e) { console.error('[globe] fetch failed:', e); });
+            .then(function (data) {
+                if (data.cities && data.cities.length) {
+                    _globeDataLoaded = true;
+                    updateGlobe(data);
+                } else if (attempt < 5) {
+                    setTimeout(function () { fetchGlobe(attempt + 1); }, 2000 * attempt);
+                }
+            })
+            .catch(function (e) {
+                console.error('[globe] fetch failed:', e);
+                if (attempt < 5) {
+                    setTimeout(function () { fetchGlobe(attempt + 1); }, 2000 * attempt);
+                }
+            });
     }
 
-    window._globeUpdateFn = updateGlobe;
+    // Safety net: dismiss loader after 10s regardless, so the globe is never permanently hidden
+    setTimeout(dismissLoader, 10000);
+
+    window._globeUpdateFn = function (data) {
+        _globeDataLoaded = true;
+        updateGlobe(data);
+    };
 
     fetchGlobe();
 
