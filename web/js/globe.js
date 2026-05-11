@@ -152,10 +152,37 @@
             }));
         });
 
+        // Add a green dot for the current user, unless they're already represented
+        if (_userLat !== null && _userLng !== null) {
+            var USER_COLOR = 'rgb(0,230,100)';
+            dots.push({ lat: _userLat, lng: _userLng, city: 'You', country: '', count: 1,
+                radius: 0.35, altitude: 0.008,
+                color: 'rgba(0,230,100,0.06)', isHover: false });
+            dots.push({ lat: _userLat, lng: _userLng, city: 'You', country: '', count: 1,
+                radius: 0.18, altitude: 0.003,
+                color: USER_COLOR, isHover: false });
+            rings.push({ lat: _userLat, lng: _userLng, color: USER_COLOR,
+                maxRadius: 2.5, speed: 1.2, period: 1800 });
+        }
+
         myGlobe.pointsData(dots).ringsData(rings);
     }
 
     var _globeReady = false;
+    var _userLat = null, _userLng = null;
+
+    function fetchMe() {
+        return fetch('/me')
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (me) {
+                if (me && me.lat && me.lng) {
+                    _userLat = me.lat;
+                    _userLng = me.lng;
+                    myGlobe.pointOfView({ lat: me.lat, lng: me.lng, altitude: 2.5 });
+                }
+            })
+            .catch(function () { /* keep default POV */ });
+    }
 
     function fetchGlobe(attempt) {
         attempt = attempt || 1;
@@ -189,7 +216,7 @@
 
     myGlobe.onGlobeReady(function () {
         _globeReady = true;
-        fetchGlobe();
+        fetchMe().then(function () { fetchGlobe(); });
         if (window._pendingGlobeData) {
             updateGlobe(window._pendingGlobeData);
             window._pendingGlobeData = null;
