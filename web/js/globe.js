@@ -188,12 +188,15 @@
         updateGlobe(data);
     };
 
-    // Consume any SSE globe payload that arrived before this script was ready
-    if (window._pendingGlobeData) {
-        window._globeUpdateFn(window._pendingGlobeData);
-        window._pendingGlobeData = null;
-    }
-
-    fetchGlobe();
+    myGlobe.onGlobeReady(function () {
+        // Consume any SSE globe payload that arrived before the globe was ready
+        if (window._pendingGlobeData) {
+            window._globeUpdateFn(window._pendingGlobeData);
+            window._pendingGlobeData = null;
+        }
+        if (!_globeDataLoaded) {
+            fetchGlobe();
+        }
+    });
 
 }());
