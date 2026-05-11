@@ -119,7 +119,20 @@
 
     window.addEventListener('mouseleave', () => { mouse.x = -9999; mouse.y = -9999; });
     window.addEventListener('resize', resize);
-    resize();
+    window.addEventListener('orientationchange', () => setTimeout(resize, 100));
+
+    // Defer first resize until layout is ready so innerWidth/Height are correct
+    // (matters on mobile/tablet where dimensions may be 0 at parse time)
+    let animating = false;
+    function start() {
+        resize();
+        if (!animating) { animating = true; step(); }
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', start);
+    } else {
+        requestAnimationFrame(start);
+    }
 
     function buildGrid() {
         const total = gridCols * gridRows;
@@ -270,6 +283,4 @@
 
         requestAnimationFrame(step);
     }
-
-    step();
 })();
