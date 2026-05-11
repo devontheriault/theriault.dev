@@ -155,8 +155,7 @@
         myGlobe.pointsData(dots).ringsData(rings);
     }
 
-    var _globeDataLoaded = false;
-    var _globeReady      = false;
+    var _globeReady = false;
 
     function fetchGlobe(attempt) {
         attempt = attempt || 1;
@@ -185,23 +184,16 @@
     setTimeout(dismissLoader, 10000);
 
     window._globeUpdateFn = function (data) {
-        if (!_globeReady) {
-            window._pendingGlobeData = data;
-            return;
-        }
-        _globeDataLoaded = true;
-        updateGlobe(data);
+        if (_globeReady) updateGlobe(data);
+        else window._pendingGlobeData = data;
     };
 
     myGlobe.onGlobeReady(function () {
         _globeReady = true;
+        fetchGlobe();
         if (window._pendingGlobeData) {
-            _globeDataLoaded = true;
             updateGlobe(window._pendingGlobeData);
             window._pendingGlobeData = null;
-        }
-        if (!_globeDataLoaded) {
-            fetchGlobe();
         }
     });
 
