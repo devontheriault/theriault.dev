@@ -2,10 +2,9 @@
 
 (function () {
 
-    console.log('[globe] script running');
     var globeEl = document.getElementById('globe-container');
     if (!globeEl || typeof Globe === 'undefined') {
-        console.error('[globe] Globe library or container missing, globeEl:', !!globeEl, 'Globe defined:', typeof Globe);
+        console.error('[globe] Globe library or container missing');
         return;
     }
 
@@ -166,7 +165,6 @@
                 return r.json();
             })
             .then(function (data) {
-                console.log('[globe] fetchGlobe data:', data);
                 if (data.cities && data.cities.length) {
                     updateGlobe(data);
                 } else if (attempt < 5) {
@@ -190,7 +188,6 @@
     };
 
     myGlobe.onGlobeReady(function () {
-        console.log('[globe] onGlobeReady fired');
         _globeReady = true;
         fetchGlobe();
         if (window._pendingGlobeData) {
@@ -198,7 +195,5 @@
             window._pendingGlobeData = null;
         }
     });
-
-    console.log('[globe] globe.js init complete, globe object:', !!myGlobe);
 
 }());
