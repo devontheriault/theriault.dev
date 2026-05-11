@@ -166,16 +166,18 @@ int db_get_city_globe_data(char cities[][64], char countries[][64], int counts[]
     /* Group by both city and country so same-named cities in different
        countries are treated as distinct points. Fallback coordinates also
        filter by country to avoid cross-country coordinate bleed. */
+    /* NULLIF(AVG(...), 0) converts a zero average (stored when geo lookup
+       failed) to NULL so COALESCE falls through to the ip_ranges fallback. */
     const char *sql =
         "SELECT v.city, v.country, COUNT(*) as cnt,"
-        "  COALESCE(AVG(v.lat),"
+        "  COALESCE(NULLIF(AVG(v.lat), 0),"
         "    (SELECT r.latitude  FROM ip_ranges r WHERE r.city = v.city AND r.country = v.country AND r.latitude  != 0 LIMIT 1),"
         "    (SELECT r.latitude  FROM ip_ranges r WHERE r.city = v.city AND r.latitude  != 0 LIMIT 1)) as clat,"
-        "  COALESCE(AVG(v.lng),"
+        "  COALESCE(NULLIF(AVG(v.lng), 0),"
         "    (SELECT r.longitude FROM ip_ranges r WHERE r.city = v.city AND r.country = v.country AND r.longitude != 0 LIMIT 1),"
         "    (SELECT r.longitude FROM ip_ranges r WHERE r.city = v.city AND r.longitude != 0 LIMIT 1)) as clng "
         "FROM visits v "
-        "WHERE v.city NOT IN ('Unknown', 'Localhost', 'Local', '', '-') "
+        "WHERE v.city NOT IN ('Unknown', 'Localhost', 'Local', '') "
         "GROUP BY v.city, v.country "
         "HAVING clat IS NOT NULL AND (clat != 0 OR clng != 0) "
         "ORDER BY cnt DESC "
