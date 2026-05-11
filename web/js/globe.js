@@ -156,6 +156,7 @@
     }
 
     var _globeDataLoaded = false;
+    var _globeReady      = false;
 
     function fetchGlobe(attempt) {
         attempt = attempt || 1;
@@ -184,14 +185,19 @@
     setTimeout(dismissLoader, 10000);
 
     window._globeUpdateFn = function (data) {
+        if (!_globeReady) {
+            window._pendingGlobeData = data;
+            return;
+        }
         _globeDataLoaded = true;
         updateGlobe(data);
     };
 
     myGlobe.onGlobeReady(function () {
-        // Consume any SSE globe payload that arrived before the globe was ready
+        _globeReady = true;
         if (window._pendingGlobeData) {
-            window._globeUpdateFn(window._pendingGlobeData);
+            _globeDataLoaded = true;
+            updateGlobe(window._pendingGlobeData);
             window._pendingGlobeData = null;
         }
         if (!_globeDataLoaded) {
