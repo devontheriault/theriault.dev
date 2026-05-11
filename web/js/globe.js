@@ -59,6 +59,33 @@
     myGlobe.controls().autoRotateSpeed = 0.06;
     myGlobe.pointOfView({ lat: 48, lng: -100, altitude: 2.5 });
 
+    // Keep globe sized to its container (fixes raycaster drift on resize/orientation change)
+    if (typeof ResizeObserver !== 'undefined') {
+        new ResizeObserver(function (entries) {
+            var rect = entries[0].contentRect;
+            if (rect.width > 0 && rect.height > 0) {
+                myGlobe.width(rect.width).height(rect.height);
+            }
+        }).observe(globeEl);
+    }
+
+    // Touch: show label on tap (tablets have no mousemove hover)
+    myGlobe.onPointClick(function (point) {
+        if (!point || !point.isHover) return;
+        var label = point.country ? point.city + ', ' + point.country : point.city;
+        var html = '<div style="font-size:0.8rem;background:#1c2230;padding:4px 8px;border-radius:6px;border:1px solid #30363d">' +
+            '<strong>' + label + '</strong><br>' + point.count.toLocaleString() + ' visits</div>';
+        var existing = globeEl.querySelector('.globe-tap-label');
+        if (existing) existing.remove();
+        var el = document.createElement('div');
+        el.className = 'globe-tap-label';
+        el.innerHTML = html;
+        el.style.cssText = 'position:absolute;bottom:12px;left:50%;transform:translateX(-50%);pointer-events:none;z-index:10;';
+        globeEl.appendChild(el);
+        clearTimeout(myGlobe._tapLabelTimer);
+        myGlobe._tapLabelTimer = setTimeout(function () { el.remove(); }, 3000);
+    });
+
     if (typeof topojson !== 'undefined') {
         fetch('https://unpkg.com/world-atlas@2.0.2/countries-110m.json')
             .then(function (r) { return r.json(); })
@@ -135,5 +162,7 @@
     }
 
     window._globeUpdateFn = updateGlobe;
+
+    fetchGlobe();
 
 }());
