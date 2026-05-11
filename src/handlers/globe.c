@@ -10,11 +10,11 @@
 void handle_globe(int client_fd, const HttpRequest *req) {
     (void)req;
 
-    static char   cities[GLOBE_MAX_CITIES][64];
-    static char   countries[GLOBE_MAX_CITIES][64];
-    static int    counts[GLOBE_MAX_CITIES];
-    static double lats[GLOBE_MAX_CITIES];
-    static double lngs[GLOBE_MAX_CITIES];
+    char   cities[GLOBE_MAX_CITIES][64];
+    char   countries[GLOBE_MAX_CITIES][64];
+    int    counts[GLOBE_MAX_CITIES];
+    double lats[GLOBE_MAX_CITIES];
+    double lngs[GLOBE_MAX_CITIES];
 
     int n = db_get_city_globe_data(cities, countries, counts, lats, lngs, GLOBE_MAX_CITIES);
 
