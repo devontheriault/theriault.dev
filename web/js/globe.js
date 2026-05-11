@@ -165,8 +165,8 @@
                 return r.json();
             })
             .then(function (data) {
+                console.log('[globe] fetchGlobe data:', data);
                 if (data.cities && data.cities.length) {
-                    _globeDataLoaded = true;
                     updateGlobe(data);
                 } else if (attempt < 5) {
                     setTimeout(function () { fetchGlobe(attempt + 1); }, 2000 * attempt);
