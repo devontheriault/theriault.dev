@@ -178,6 +178,7 @@
                 if (me && me.lat && me.lng) {
                     _userLat = me.lat;
                     _userLng = me.lng;
+                    console.log('[globe] user location:', me.city, me.country, me.lat, me.lng);
                     myGlobe.pointOfView({ lat: me.lat, lng: me.lng, altitude: 2.5 });
                 }
             })
