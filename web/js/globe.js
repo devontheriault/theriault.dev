@@ -2,9 +2,10 @@
 
 (function () {
 
+    console.log('[globe] script running');
     var globeEl = document.getElementById('globe-container');
     if (!globeEl || typeof Globe === 'undefined') {
-        console.error('[globe] Globe library or container missing');
+        console.error('[globe] Globe library or container missing, globeEl:', !!globeEl, 'Globe defined:', typeof Globe);
         return;
     }
 
@@ -189,6 +190,7 @@
     };
 
     myGlobe.onGlobeReady(function () {
+        console.log('[globe] onGlobeReady fired');
         _globeReady = true;
         fetchGlobe();
         if (window._pendingGlobeData) {
@@ -196,5 +198,7 @@
             window._pendingGlobeData = null;
         }
     });
+
+    console.log('[globe] globe.js init complete, globe object:', !!myGlobe);
 
 }());
