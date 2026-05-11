@@ -404,8 +404,10 @@ fetchHeatmap();
                 if (payload.stats)   renderStats(payload.stats);
                 if (payload.heatmap) renderHeatmap(payload.heatmap);
             }
-            if (payload.globe && window._globeUpdateFn)
-                window._globeUpdateFn(payload.globe);
+            if (payload.globe) {
+                if (window._globeUpdateFn) window._globeUpdateFn(payload.globe);
+                else window._pendingGlobeData = payload.globe;
+            }
         } catch (err) {
             console.error('[sse] parse error:', err);
         }
