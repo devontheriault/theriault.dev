@@ -21,6 +21,7 @@ StatsResult analytics_get_stats(const char *country_filter, const char *city_fil
                                                       country_filter, city_filter);
     result.os_len           = db_get_top_os(result.top_os, result.os_counts, 10,
                                             country_filter, city_filter);
+    result.avg_time_on_page = db_get_avg_time_on_page();
 
     if (country_filter && country_filter[0] != '\0') {
         strncpy(result.active_country, country_filter, 63);

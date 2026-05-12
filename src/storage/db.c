@@ -39,6 +39,7 @@ int db_init(void) {
     sqlite3_exec(g_db, "ALTER TABLE visits ADD COLUMN browser TEXT",      NULL, NULL, NULL);
     sqlite3_exec(g_db, "ALTER TABLE visits ADD COLUMN device_type TEXT",  NULL, NULL, NULL);
     sqlite3_exec(g_db, "ALTER TABLE visits ADD COLUMN os TEXT",           NULL, NULL, NULL);
+    sqlite3_exec(g_db, "ALTER TABLE visits ADD COLUMN time_on_page INTEGER", NULL, NULL, NULL);
     sqlite3_exec(g_db, "ALTER TABLE ip_ranges ADD COLUMN latitude REAL DEFAULT 0", NULL, NULL, NULL);
     sqlite3_exec(g_db, "ALTER TABLE ip_ranges ADD COLUMN longitude REAL DEFAULT 0", NULL, NULL, NULL);
     /* Index so city-name coord fallback queries are fast */
@@ -92,6 +93,51 @@ int db_insert_visit(const char *ip, const char *country, const char *city, const
         return -1;
     }
     return 0;
+}
+
+int db_update_visit_duration(const char *ip, const char *user_agent, int seconds) {
+    if (!g_db) return -1;
+
+    const char *sql =
+        "UPDATE visits SET time_on_page = ?"
+        " WHERE id = ("
+        "   SELECT id FROM visits"
+        "   WHERE ip = ? AND user_agent = ?"
+        "   ORDER BY timestamp DESC LIMIT 1"
+        " ) AND time_on_page IS NULL;";
+
+    sqlite3_stmt *stmt = NULL;
+    if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK) {
+        fprintf(stderr, "[db] Prepare error: %s\n", sqlite3_errmsg(g_db));
+        return -1;
+    }
+
+    sqlite3_bind_int (stmt, 1, seconds);
+    sqlite3_bind_text(stmt, 2, ip,         -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 3, user_agent, -1, SQLITE_STATIC);
+
+    int rc = sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+    return (rc == SQLITE_DONE) ? 0 : -1;
+}
+
+double db_get_avg_time_on_page(void) {
+    if (!g_db) return 0.0;
+
+    const char *sql =
+        "SELECT AVG(time_on_page) FROM visits"
+        " WHERE time_on_page IS NOT NULL;";
+
+    sqlite3_stmt *stmt = NULL;
+    if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK)
+        return 0.0;
+
+    double avg = 0.0;
+    if (sqlite3_step(stmt) == SQLITE_ROW && sqlite3_column_type(stmt, 0) != SQLITE_NULL)
+        avg = sqlite3_column_double(stmt, 0);
+
+    sqlite3_finalize(stmt);
+    return avg;
 }
 
 int db_get_total_visits(void) {

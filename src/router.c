@@ -6,6 +6,7 @@
 #include "handlers/heatmap.h"
 #include "handlers/sse.h"
 #include "handlers/me.h"
+#include "handlers/duration.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -73,6 +74,13 @@ int router_dispatch(int client_fd, HttpRequest *req) {
     fprintf(stdout, "[router] %s %s  from %s\n",
             req->method, req->path, req->client_ip);
     fflush(stdout);
+
+    if (strcmp(req->method, "POST") == 0) {
+        if (strncmp(req->path, "/duration", 9) == 0) {
+            handle_duration(client_fd, req);
+            return 0;
+        }
+    }
 
     if (strcmp(req->method, "GET") == 0) {
         if (strncmp(req->path, "/events", 7) == 0) {

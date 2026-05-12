@@ -132,7 +132,8 @@ static int sse_build_json(char *buf, size_t size) {
     }
 
     pos += snprintf(buf + pos, size - (size_t)pos,
-        "],\"active_country\":\"\"}");
+        "],\"active_country\":\"\",\"avg_time_on_page\":%.1f}",
+        stats.avg_time_on_page);
 
     /* --- Heatmap (no country filter) --- */
     int hm[7][24];

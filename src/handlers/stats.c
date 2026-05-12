@@ -102,7 +102,8 @@ void handle_stats(int client_fd, const HttpRequest *req) {
     char escaped_country[128];
     json_string_escape(stats.active_country, escaped_country, sizeof(escaped_country));
     pos += snprintf(body + pos, sizeof(body) - (size_t)pos,
-        "],\"active_country\":\"%s\"}", escaped_country);
+        "],\"active_country\":\"%s\",\"avg_time_on_page\":%.1f}",
+        escaped_country, stats.avg_time_on_page);
 
     char header[512];
     snprintf(header, sizeof(header),

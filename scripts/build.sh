@@ -22,6 +22,7 @@ SRCS=(
     src/handlers/me.c
     src/handlers/globe.c
     src/handlers/heatmap.c
+    src/handlers/duration.c
     src/services/logger.c
     src/services/geo.c
     src/services/analytics.c

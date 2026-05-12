@@ -85,6 +85,13 @@ function formatNumber(n) {
     return Number(n).toLocaleString();
 }
 
+function formatDuration(seconds) {
+    var s = Math.round(seconds);
+    if (s < 60) return s + 's';
+    var m = Math.floor(s / 60), r = s % 60;
+    return m + 'm ' + r + 's';
+}
+
 function escapeHtml(s) {
     return s
         .replace(/&/g, '&amp;')
@@ -171,6 +178,12 @@ function renderStats(data) {
     }
     if (elUniqueCountries) {
         elUniqueCountries.textContent = formatNumber(data.unique_countries || 0);
+    }
+
+    var elAvgTime = document.getElementById('avg-time-on-page');
+    if (elAvgTime) {
+        var avg = data.avg_time_on_page || 0;
+        elAvgTime.textContent = avg > 0 ? formatDuration(avg) : '—';
     }
 
     if (elCountryList) {
@@ -386,6 +399,19 @@ document.querySelectorAll('.card[data-tooltip]').forEach(function(card) {
             }
         })
         .catch(function(err) { console.error('[app] /me fetch failed:', err); });
+}());
+
+/* ---- Time on page beacon ---- */
+(function () {
+    var startTime = Date.now();
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'hidden') {
+            var seconds = Math.round((Date.now() - startTime) / 1000);
+            if (seconds > 0) {
+                navigator.sendBeacon('/duration', 'seconds=' + seconds);
+            }
+        }
+    });
 }());
 
 /* ---- Bootstrap ---- */

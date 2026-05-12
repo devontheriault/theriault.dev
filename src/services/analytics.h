@@ -20,6 +20,7 @@ typedef struct {
     char top_os[10][32];
     int  os_counts[10];
     int  os_len;
+    double avg_time_on_page;
 } StatsResult;
 
 StatsResult analytics_get_stats(const char *country_filter, const char *city_filter);
