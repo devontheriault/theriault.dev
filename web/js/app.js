@@ -79,6 +79,7 @@ function moveTooltip(e) {
 }
 
 document.addEventListener('mousemove', moveTooltip);
+document.addEventListener('scroll', hideTooltip, { passive: true, capture: true });
 
 /* ---- Helpers ---- */
 function formatNumber(n) {

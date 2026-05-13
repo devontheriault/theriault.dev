@@ -83,6 +83,12 @@
     }).observe(globeEl);
   }
 
+  function dismissTapLabel() {
+    clearTimeout(myGlobe._tapLabelTimer);
+    var existing = globeEl.querySelector(".globe-tap-label");
+    if (existing) existing.remove();
+  }
+
   // Touch: show label on tap (tablets have no mousemove hover)
   myGlobe.onPointClick(function (point) {
     if (!point || !point.isHover) return;
@@ -94,19 +100,23 @@
       "</strong><br>" +
       point.count.toLocaleString() +
       " visits</div>";
-    var existing = globeEl.querySelector(".globe-tap-label");
-    if (existing) existing.remove();
+    dismissTapLabel();
     var el = document.createElement("div");
     el.className = "globe-tap-label";
     el.innerHTML = html;
     el.style.cssText =
       "position:absolute;bottom:12px;left:50%;transform:translateX(-50%);pointer-events:none;z-index:10;";
     globeEl.appendChild(el);
-    clearTimeout(myGlobe._tapLabelTimer);
-    myGlobe._tapLabelTimer = setTimeout(function () {
-      el.remove();
-    }, 3000);
+    myGlobe._tapLabelTimer = setTimeout(dismissTapLabel, 3000);
   });
+
+  document.addEventListener("scroll", dismissTapLabel, { passive: true, capture: true });
+  document.addEventListener("click", function (e) {
+    if (!globeEl.contains(e.target)) dismissTapLabel();
+  });
+  document.addEventListener("touchstart", function (e) {
+    if (!globeEl.contains(e.target)) dismissTapLabel();
+  }, { passive: true });
 
   if (typeof topojson !== "undefined") {
     fetch("https://unpkg.com/world-atlas@2.0.2/countries-110m.json")
