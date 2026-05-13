@@ -384,7 +384,7 @@ footer {
 
 footer a {
     color: var(--accent);
-    text-decoration: none;
+    text-decoration: underline;
 }
 
 footer .tech-note {
