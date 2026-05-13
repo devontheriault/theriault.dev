@@ -351,6 +351,7 @@ function wireBarTooltips(container, nameKey) {
         if (!e.target.closest('.country-item')) return;
         hideTooltip();
     });
+    container.addEventListener('touchend', hideTooltip);
 }
 
 if (elCountryList) wireBarTooltips(elCountryList, 'country');
@@ -369,11 +370,13 @@ if (elHeatmapGrid) {
         if (!e.target.closest('.heatmap-cell')) return;
         hideTooltip();
     });
+    elHeatmapGrid.addEventListener('touchend', hideTooltip);
 }
 
 document.querySelectorAll('.card[data-tooltip]').forEach(function(card) {
     card.addEventListener('mouseenter', function(e) { showTooltip(card.dataset.tooltip, e); });
     card.addEventListener('mouseleave', hideTooltip);
+    card.addEventListener('touchend', hideTooltip);
 });
 
 /* ---- Your Visit ---- */
