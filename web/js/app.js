@@ -263,7 +263,7 @@ function fetchStats() {
     if (activeCity)    params.push('city='    + encodeURIComponent(activeCity));
     var url = '/stats' + (params.length ? '?' + params.join('&') : '');
 
-    fetch(url)
+    return fetch(url)
         .then(function(res) {
             if (!res.ok) throw new Error('HTTP ' + res.status);
             return res.json();
@@ -418,12 +418,8 @@ document.querySelectorAll('.card[data-tooltip]').forEach(function(card) {
     });
 }());
 
-/* ---- Bootstrap ---- */
-fetchStats();
-fetchHeatmap();
-
 /* ---- SSE: push updates on each new visit ---- */
-(function () {
+function initSSE() {
     var es = new EventSource('/events');
 
     es.onmessage = function (e) {
@@ -445,7 +441,11 @@ fetchHeatmap();
 
     es.onerror = function () { setError('SSE disconnected — reconnecting…'); };
     es.onopen  = function () { setOk(); };
-}());
+}
+
+/* ---- Bootstrap ---- */
+fetchStats().then(initSSE);
+fetchHeatmap();
 
 /* ---- Mouse-following background gradient ---- */
 (function () {
