@@ -42,6 +42,7 @@ static void serve_static(int client_fd, const char *web_path) {
         else if (strcmp(dot, ".png")  == 0) ct = "image/png";
         else if (strcmp(dot, ".svg")  == 0) ct = "image/svg+xml";
         else if (strcmp(dot, ".ico")  == 0) ct = "image/x-icon";
+        else if (strcmp(dot, ".txt")  == 0) ct = "text/plain";
     }
 
     fseek(f, 0, SEEK_END);
@@ -107,8 +108,9 @@ int router_dispatch(int client_fd, HttpRequest *req) {
             handle_me(client_fd, req);
             return 0;
         }
-        /* Serve static assets (css, js, images) without recording a visit */
-        if (strncmp(req->path, "/css/", 5) == 0 ||
+        /* Serve static assets (css, js, images, robots.txt) without recording a visit */
+        if (strcmp(req->path, "/robots.txt") == 0 ||
+            strncmp(req->path, "/css/", 5) == 0 ||
             strncmp(req->path, "/js/",  4) == 0 ||
             strncmp(req->path, "/img/", 5) == 0) {
             serve_static(client_fd, req->path);
