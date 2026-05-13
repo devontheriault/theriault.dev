@@ -6,6 +6,7 @@
         <title>Who Touched My Server</title>
         <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌍</text></svg>" />
         <link rel="stylesheet" href="/css/styles.css" />
+        <link rel="preconnect" href="https://unpkg.com" />
     </head>
     <body>
         <div id="bg-gradient"></div>
@@ -180,42 +181,9 @@
         </div>
 
         <script src="/js/app.js" defer></script>
+        <script src="https://unpkg.com/topojson-client@3/dist/topojson-client.min.js" defer></script>
+        <script src="https://unpkg.com/globe.gl/dist/globe.gl.min.js" defer></script>
+        <script src="/js/globe.js" defer></script>
         <script src="/js/background.js" defer></script>
-        <script>
-          (function () {
-            var loaded = false;
-            function loadGlobe() {
-              if (loaded) return;
-              loaded = true;
-              var link = document.createElement("link");
-              link.rel = "preconnect";
-              link.href = "https://unpkg.com";
-              document.head.appendChild(link);
-              function s(src, onload) {
-                var el = document.createElement("script");
-                el.src = src;
-                if (onload) el.onload = onload;
-                document.head.appendChild(el);
-              }
-              s("https://unpkg.com/topojson-client@3/dist/topojson-client.min.js", function () {
-                s("https://unpkg.com/globe.gl/dist/globe.gl.min.js", function () {
-                  s("/js/globe.js");
-                });
-              });
-            }
-            var el = document.getElementById("globe-container");
-            if (!el) return;
-            if ("IntersectionObserver" in window) {
-              new IntersectionObserver(function (entries, obs) {
-                if (entries[0].isIntersecting) {
-                  obs.disconnect();
-                  loadGlobe();
-                }
-              }, { rootMargin: "400px" }).observe(el);
-            } else {
-              loadGlobe();
-            }
-          })();
-        </script>
     </body>
 </html>
