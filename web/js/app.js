@@ -5,6 +5,8 @@ const POLL_INTERVAL_MS = 5000;
 /* ---- State ---- */
 let activeCountry = null;
 let activeCity    = null;
+let activeDow  = null;
+let activeHour = null;
 
 /* ---- DOM references ---- */
 const elHeatmapGrid      = document.getElementById('heatmap-grid');
@@ -25,6 +27,10 @@ const elStatusDot           = document.getElementById('status-dot');
 const elBrowserList         = document.getElementById('browser-list');
 const elDeviceList          = document.getElementById('device-list');
 const elOsList              = document.getElementById('os-list');
+const elHeatmapDowClear  = document.getElementById('heatmap-dow-clear');
+const elHeatmapDowLabel  = document.getElementById('heatmap-dow-label');
+const elHeatmapHourClear = document.getElementById('heatmap-hour-clear');
+const elHeatmapHourLabel = document.getElementById('heatmap-hour-label');
 
 /* ---- Filter UI ---- */
 function updateFilterUI() {
@@ -46,6 +52,38 @@ function updateFilterUI() {
     if (elCityList) {
         elCityList.querySelectorAll('.country-item').forEach(function(el) {
             el.classList.toggle('active', el.getAttribute('data-city') === activeCity);
+        });
+    }
+    var DOW_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    if (elHeatmapDowClear && elHeatmapDowLabel) {
+        elHeatmapDowClear.style.display = activeDow !== null ? '' : 'none';
+        elHeatmapDowLabel.textContent   = activeDow !== null ? DOW_NAMES[activeDow] : '';
+    }
+    if (elHeatmapHourClear && elHeatmapHourLabel) {
+        elHeatmapHourClear.style.display = activeHour !== null ? '' : 'none';
+        elHeatmapHourLabel.textContent   = activeHour !== null
+            ? (String(activeHour).padStart(2, '0') + ':00') : '';
+    }
+    updateHeatmapHighlight();
+}
+
+function updateHeatmapHighlight() {
+    document.querySelectorAll('.heatmap-day-labels span').forEach(function(span, i) {
+        span.classList.toggle('active', activeDow === i);
+    });
+    if (elHeatmapHourLabels) {
+        Array.from(elHeatmapHourLabels.querySelectorAll('span')).forEach(function(span) {
+            var h = parseInt(span.dataset.hour, 10);
+            span.classList.toggle('active', activeHour !== null && h === activeHour);
+        });
+    }
+    if (elHeatmapGrid) {
+        Array.from(elHeatmapGrid.children).forEach(function(cell) {
+            var d = parseInt(cell.dataset.dow,  10);
+            var h = parseInt(cell.dataset.hour, 10);
+            cell.classList.toggle('active',
+                activeDow !== null && d === activeDow &&
+                activeHour !== null && h === activeHour);
         });
     }
 }
@@ -225,6 +263,8 @@ function renderHeatmap(data) {
         for (var h = 0; h < 24; h++) {
             var lbl = document.createElement('span');
             lbl.textContent = h % 3 === 0 ? String(h).padStart(2, '0') : '';
+            lbl.dataset.hour = h;
+            lbl.title = String(h).padStart(2, '0') + ':00';
             elHeatmapHourLabels.appendChild(lbl);
         }
     }
@@ -244,9 +284,14 @@ function renderHeatmap(data) {
             cell.style.background = 'rgba(88,166,255,' + (0.08 + intensity * 0.92).toFixed(3) + ')';
             cell.dataset.tooltip = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d] + ' ' +
                 String(h).padStart(2,'0') + ':00 — ' + count + ' visit' + (count !== 1 ? 's' : '');
-            if (needsBuild) elHeatmapGrid.appendChild(cell);
+            if (needsBuild) {
+                cell.dataset.dow  = d;
+                cell.dataset.hour = h;
+                elHeatmapGrid.appendChild(cell);
+            }
         }
     }
+    updateHeatmapHighlight();
 }
 
 function fetchHeatmap() {
@@ -263,8 +308,10 @@ function fetchHeatmap() {
 /* ---- Fetch ---- */
 function fetchStats() {
     var params = [];
-    if (activeCountry) params.push('country=' + encodeURIComponent(activeCountry));
-    if (activeCity)    params.push('city='    + encodeURIComponent(activeCity));
+    if (activeCountry)    params.push('country=' + encodeURIComponent(activeCountry));
+    if (activeCity)       params.push('city='    + encodeURIComponent(activeCity));
+    if (activeDow  !== null) params.push('dow='  + activeDow);
+    if (activeHour !== null) params.push('hour=' + activeHour);
     var url = '/stats' + (params.length ? '?' + params.join('&') : '');
 
     return fetch(url)
@@ -378,6 +425,63 @@ if (elHeatmapGrid) {
     elHeatmapGrid.addEventListener('touchend', hideTooltip);
 }
 
+if (elHeatmapGrid) {
+    elHeatmapGrid.addEventListener('click', function(e) {
+        var cell = e.target.closest('.heatmap-cell');
+        if (!cell) return;
+        var d = parseInt(cell.dataset.dow,  10);
+        var h = parseInt(cell.dataset.hour, 10);
+        if (activeDow === d && activeHour === h) {
+            activeDow = null; activeHour = null;
+        } else {
+            activeDow = d; activeHour = h;
+        }
+        updateFilterUI();
+        fetchStats();
+    });
+}
+
+var elDayLabels = document.querySelector('.heatmap-day-labels');
+if (elDayLabels) {
+    elDayLabels.addEventListener('click', function(e) {
+        var span = e.target.closest('span');
+        if (!span) return;
+        var spans = Array.from(elDayLabels.querySelectorAll('span'));
+        var d = spans.indexOf(span);
+        if (d < 0) return;
+        activeDow = (activeDow === d) ? null : d;
+        updateFilterUI();
+        fetchStats();
+    });
+}
+
+if (elHeatmapHourLabels) {
+    elHeatmapHourLabels.addEventListener('click', function(e) {
+        var span = e.target.closest('span');
+        if (!span || span.dataset.hour === undefined) return;
+        var h = parseInt(span.dataset.hour, 10);
+        activeHour = (activeHour === h) ? null : h;
+        updateFilterUI();
+        fetchStats();
+    });
+}
+
+if (elHeatmapDowClear) {
+    elHeatmapDowClear.addEventListener('click', function() {
+        activeDow = null;
+        updateFilterUI();
+        fetchStats();
+    });
+}
+
+if (elHeatmapHourClear) {
+    elHeatmapHourClear.addEventListener('click', function() {
+        activeHour = null;
+        updateFilterUI();
+        fetchStats();
+    });
+}
+
 document.querySelectorAll('.card[data-tooltip]').forEach(function(card) {
     card.addEventListener('mouseenter', function(e) { showTooltip(card.dataset.tooltip, e); });
     card.addEventListener('mouseleave', hideTooltip);
@@ -430,7 +534,7 @@ function initSSE() {
         try {
             var payload = JSON.parse(e.data);
             /* Only overwrite stats/heatmap when no filter is active */
-            if (!activeCountry && !activeCity) {
+            if (!activeCountry && !activeCity && activeDow === null && activeHour === null) {
                 if (payload.stats)   renderStats(payload.stats);
                 if (payload.heatmap) renderHeatmap(payload.heatmap);
             }

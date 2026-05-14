@@ -79,7 +79,7 @@ static int sse_build_json(char *buf, size_t size) {
     int pos = 0;
 
     /* --- Stats (no country filter) --- */
-    StatsResult stats = analytics_get_stats("", "");
+    StatsResult stats = analytics_get_stats("", "", -1, -1);
     pos += snprintf(buf + pos, size - (size_t)pos,
         "{\"stats\":{"
         "\"total_visits\":%d,"

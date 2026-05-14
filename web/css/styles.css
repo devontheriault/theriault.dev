@@ -505,7 +505,7 @@ footer .tech-note {
     aspect-ratio: 1;
     border-radius: 3px;
     min-width: 14px;
-    cursor: default;
+    cursor: pointer;
     position: relative;
     transition: transform 0.12s ease, filter 0.12s ease;
 }
@@ -515,6 +515,29 @@ footer .tech-note {
     filter: brightness(1.6);
     outline: 1.5px solid var(--accent);
     z-index: 2;
+}
+
+.heatmap-cell.active {
+    outline: 2px solid var(--accent);
+    z-index: 3;
+}
+
+
+.heatmap-day-labels span,
+.heatmap-hour-labels span {
+    cursor: pointer;
+    transition: color 0.15s;
+}
+
+.heatmap-day-labels span:hover,
+.heatmap-hour-labels span:hover {
+    color: var(--accent);
+}
+
+.heatmap-day-labels span.active,
+.heatmap-hour-labels span.active {
+    color: var(--accent);
+    font-weight: 700;
 }
 
 /* ===== Tooltip ===== */

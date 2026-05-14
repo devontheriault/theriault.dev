@@ -2,6 +2,7 @@
 #include "../services/analytics.h"
 #include "../utils/json.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -36,7 +37,16 @@ void handle_stats(int client_fd, const HttpRequest *req) {
     parse_query_param(req->path, "country", country_filter, sizeof(country_filter));
     parse_query_param(req->path, "city",    city_filter,    sizeof(city_filter));
 
-    StatsResult stats = analytics_get_stats(country_filter, city_filter);
+    char dow_str[8]  = {0};
+    char hour_str[8] = {0};
+    parse_query_param(req->path, "dow",  dow_str,  sizeof(dow_str));
+    parse_query_param(req->path, "hour", hour_str, sizeof(hour_str));
+    int dow  = (dow_str[0]  != '\0') ? (int)strtol(dow_str,  NULL, 10) : -1;
+    int hour = (hour_str[0] != '\0') ? (int)strtol(hour_str, NULL, 10) : -1;
+    if (dow  < 0 || dow  > 6)  dow  = -1;
+    if (hour < 0 || hour > 23) hour = -1;
+
+    StatsResult stats = analytics_get_stats(country_filter, city_filter, dow, hour);
 
     /* Build the JSON body */
     char body[32768];

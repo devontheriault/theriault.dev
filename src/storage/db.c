@@ -140,88 +140,97 @@ double db_get_avg_time_on_page(void) {
     return avg;
 }
 
-int db_get_total_visits(void) {
-    if (!g_db) return 0;
-
-    const char *sql = "SELECT COUNT(*) FROM visits WHERE country NOT IN ('Unknown', 'Localhost', 'Local', '', '-');";
-    sqlite3_stmt *stmt = NULL;
-
-    if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK)
-        return 0;
-
-    int total = 0;
-    if (sqlite3_step(stmt) == SQLITE_ROW)
-        total = sqlite3_column_int(stmt, 0);
-
-    sqlite3_finalize(stmt);
-    return total;
+/* Appends filter conditions to a SQL buffer. unknown_guard=1 adds the country
+   exclusion list when no geo filter is active. Returns updated pos. */
+static int sql_append_filters(char *buf, size_t sz, int pos,
+    const char *country, const char *city, int dow, int hour, int unknown_guard)
+{
+    if (unknown_guard && !(country && country[0]) && !(city && city[0]))
+        pos += snprintf(buf + pos, sz - (size_t)pos,
+            " AND country NOT IN ('Unknown','Localhost','Local','','-')");
+    if (country && country[0])
+        pos += snprintf(buf + pos, sz - (size_t)pos, " AND country = ?");
+    if (city && city[0])
+        pos += snprintf(buf + pos, sz - (size_t)pos, " AND city = ?");
+    if (dow >= 0 && dow < 7)
+        pos += snprintf(buf + pos, sz - (size_t)pos,
+            " AND CAST(strftime('%%w', timestamp) AS INTEGER) = ?");
+    if (hour >= 0 && hour < 24)
+        pos += snprintf(buf + pos, sz - (size_t)pos,
+            " AND CAST(strftime('%%H', timestamp) AS INTEGER) = ?");
+    return pos;
 }
 
-int db_get_unique_visitors(void) {
-    if (!g_db) return 0;
-
-    const char *sql =
-        "SELECT COUNT(DISTINCT ip || '|' || user_agent || '|' || date(timestamp)) "
-        "FROM visits "
-        "WHERE country NOT IN ('Unknown', 'Localhost', 'Local', '', '-');";
-    sqlite3_stmt *stmt = NULL;
-
-    if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK)
-        return 0;
-
-    int count = 0;
-    if (sqlite3_step(stmt) == SQLITE_ROW)
-        count = sqlite3_column_int(stmt, 0);
-
-    sqlite3_finalize(stmt);
-    return count;
+/* Binds filter values in order: country, city, dow, hour.
+   Returns the next bind index. */
+static int sql_bind_filters(sqlite3_stmt *stmt, int b,
+    const char *country, const char *city, int dow, int hour)
+{
+    if (country && country[0]) sqlite3_bind_text(stmt, b++, country, -1, SQLITE_STATIC);
+    if (city    && city[0])    sqlite3_bind_text(stmt, b++, city,    -1, SQLITE_STATIC);
+    if (dow  >= 0 && dow  < 7)  sqlite3_bind_int(stmt, b++, dow);
+    if (hour >= 0 && hour < 24) sqlite3_bind_int(stmt, b++, hour);
+    return b;
 }
 
-int db_get_unique_countries(void) {
-    if (!g_db) return 0;
+static int scalar_query_filtered(const char *select_expr,
+    const char *country, const char *city, int dow, int hour)
+{
+    char sql[512];
+    int pos = snprintf(sql, sizeof(sql),
+        "SELECT %s FROM visits WHERE 1=1", select_expr);
+    pos = sql_append_filters(sql, sizeof(sql), pos, country, city, dow, hour, 1);
 
-    const char *sql = "SELECT COUNT(DISTINCT country) FROM visits WHERE country NOT IN ('Unknown', 'Localhost', 'Local', '', '-');";
     sqlite3_stmt *stmt = NULL;
+    if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK) return 0;
+    sql_bind_filters(stmt, 1, country, city, dow, hour);
 
-    if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK)
-        return 0;
-
-    int count = 0;
-    if (sqlite3_step(stmt) == SQLITE_ROW)
-        count = sqlite3_column_int(stmt, 0);
-
+    int result = 0;
+    if (sqlite3_step(stmt) == SQLITE_ROW) result = sqlite3_column_int(stmt, 0);
     sqlite3_finalize(stmt);
-    return count;
+    return result;
 }
 
-int db_get_top_countries(char names[][64], int counts[], int max_n) {
+int db_get_total_visits(const char *country, const char *city, int dow, int hour) {
+    if (!g_db) return 0;
+    return scalar_query_filtered("COUNT(*)", country, city, dow, hour);
+}
+
+int db_get_unique_visitors(const char *country, const char *city, int dow, int hour) {
+    if (!g_db) return 0;
+    return scalar_query_filtered(
+        "COUNT(DISTINCT ip||'|'||user_agent||'|'||date(timestamp))",
+        country, city, dow, hour);
+}
+
+int db_get_unique_countries(const char *country, const char *city, int dow, int hour) {
+    if (!g_db) return 0;
+    return scalar_query_filtered("COUNT(DISTINCT country)", country, city, dow, hour);
+}
+
+int db_get_top_countries(char names[][64], int counts[], int max_n, int dow, int hour) {
     if (!g_db || max_n <= 0) return 0;
 
-    const char *sql =
-        "SELECT country, COUNT(*) as cnt "
-        "FROM visits "
-        "WHERE country NOT IN ('Unknown', 'Localhost', 'Local', '', '-') "
-        "GROUP BY country "
-        "ORDER BY cnt DESC "
-        "LIMIT ?;";
+    char sql[512];
+    int pos = snprintf(sql, sizeof(sql),
+        "SELECT country, COUNT(*) AS cnt FROM visits WHERE 1=1");
+    pos = sql_append_filters(sql, sizeof(sql), pos, NULL, NULL, dow, hour, 1);
+    snprintf(sql + pos, sizeof(sql) - (size_t)pos,
+        " GROUP BY country ORDER BY cnt DESC LIMIT ?");
 
     sqlite3_stmt *stmt = NULL;
-    if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK)
-        return 0;
-
-    sqlite3_bind_int(stmt, 1, max_n);
+    if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK) return 0;
+    int b = sql_bind_filters(stmt, 1, NULL, NULL, dow, hour);
+    sqlite3_bind_int(stmt, b, max_n);
 
     int n = 0;
     while (sqlite3_step(stmt) == SQLITE_ROW && n < max_n) {
         const char *name = (const char *)sqlite3_column_text(stmt, 0);
-        int cnt = sqlite3_column_int(stmt, 1);
-
-        strncpy(names[n], name, 63);
+        strncpy(names[n], name ? name : "", 63);
         names[n][63] = '\0';
-        counts[n] = cnt;
+        counts[n] = sqlite3_column_int(stmt, 1);
         n++;
     }
-
     sqlite3_finalize(stmt);
     return n;
 }
@@ -381,33 +390,23 @@ int db_get_heatmap_data(int counts[7][24], const char *country_filter, const cha
     return max_count;
 }
 
-static int device_query(const char *sql_all, const char *sql_country, const char *sql_city,
-                         const char *sql_both, const char *fallback,
-                         const char *country_filter, const char *city_filter,
-                         char names[][32], int counts[], int max_n) {
-    int has_country = country_filter && country_filter[0] != '\0';
-    int has_city    = city_filter    && city_filter[0]    != '\0';
-
-    const char *sql;
-    if      (has_country && has_city) sql = sql_both;
-    else if (has_country)             sql = sql_country;
-    else if (has_city)                sql = sql_city;
-    else                              sql = sql_all;
+static int device_query(const char *col, const char *fallback,
+    const char *country_filter, const char *city_filter,
+    int dow, int hour,
+    char names[][32], int counts[], int max_n)
+{
+    char sql[640];
+    int pos = snprintf(sql, sizeof(sql),
+        "SELECT COALESCE(%s,'%s') AS v, COUNT(*) AS cnt FROM visits WHERE 1=1",
+        col, fallback);
+    pos = sql_append_filters(sql, sizeof(sql), pos, country_filter, city_filter, dow, hour, 1);
+    snprintf(sql + pos, sizeof(sql) - (size_t)pos,
+        " GROUP BY COALESCE(%s,'%s') ORDER BY cnt DESC LIMIT ?", col, fallback);
 
     sqlite3_stmt *stmt = NULL;
-    if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK)
-        return 0;
-
-    if (has_country && has_city) {
-        sqlite3_bind_text(stmt, 1, country_filter, -1, SQLITE_STATIC);
-        sqlite3_bind_text(stmt, 2, city_filter,    -1, SQLITE_STATIC);
-        sqlite3_bind_int (stmt, 3, max_n);
-    } else if (has_country || has_city) {
-        sqlite3_bind_text(stmt, 1, has_country ? country_filter : city_filter, -1, SQLITE_STATIC);
-        sqlite3_bind_int (stmt, 2, max_n);
-    } else {
-        sqlite3_bind_int(stmt, 1, max_n);
-    }
+    if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK) return 0;
+    int b = sql_bind_filters(stmt, 1, country_filter, city_filter, dow, hour);
+    sqlite3_bind_int(stmt, b, max_n);
 
     int n = 0;
     while (sqlite3_step(stmt) == SQLITE_ROW && n < max_n) {
@@ -417,99 +416,73 @@ static int device_query(const char *sql_all, const char *sql_country, const char
         counts[n] = sqlite3_column_int(stmt, 1);
         n++;
     }
-
     sqlite3_finalize(stmt);
     return n;
 }
 
 int db_get_top_browsers(char names[][32], int counts[], int max_n,
-                        const char *country_filter, const char *city_filter) {
+    const char *country_filter, const char *city_filter, int dow, int hour)
+{
     if (!g_db || max_n <= 0) return 0;
-    return device_query(
-        "SELECT COALESCE(browser,'Other') as b, COUNT(*) as cnt FROM visits"
-        " WHERE country NOT IN ('Unknown','Localhost','Local','','-') GROUP BY b ORDER BY cnt DESC LIMIT ?",
-        "SELECT COALESCE(browser,'Other') as b, COUNT(*) as cnt FROM visits"
-        " WHERE country=? GROUP BY b ORDER BY cnt DESC LIMIT ?",
-        "SELECT COALESCE(browser,'Other') as b, COUNT(*) as cnt FROM visits"
-        " WHERE city=? GROUP BY b ORDER BY cnt DESC LIMIT ?",
-        "SELECT COALESCE(browser,'Other') as b, COUNT(*) as cnt FROM visits"
-        " WHERE country=? AND city=? GROUP BY b ORDER BY cnt DESC LIMIT ?",
-        "Other", country_filter, city_filter, names, counts, max_n);
+    return device_query("browser", "Other",
+        country_filter, city_filter, dow, hour, names, counts, max_n);
 }
 
 int db_get_device_breakdown(char names[][32], int counts[], int max_n,
-                            const char *country_filter, const char *city_filter) {
+    const char *country_filter, const char *city_filter, int dow, int hour)
+{
     if (!g_db || max_n <= 0) return 0;
-    return device_query(
-        "SELECT COALESCE(device_type,'Desktop') as d, COUNT(*) as cnt FROM visits"
-        " WHERE country NOT IN ('Unknown','Localhost','Local','','-') GROUP BY d ORDER BY cnt DESC LIMIT ?",
-        "SELECT COALESCE(device_type,'Desktop') as d, COUNT(*) as cnt FROM visits"
-        " WHERE country=? GROUP BY d ORDER BY cnt DESC LIMIT ?",
-        "SELECT COALESCE(device_type,'Desktop') as d, COUNT(*) as cnt FROM visits"
-        " WHERE city=? GROUP BY d ORDER BY cnt DESC LIMIT ?",
-        "SELECT COALESCE(device_type,'Desktop') as d, COUNT(*) as cnt FROM visits"
-        " WHERE country=? AND city=? GROUP BY d ORDER BY cnt DESC LIMIT ?",
-        "Desktop", country_filter, city_filter, names, counts, max_n);
+    return device_query("device_type", "Desktop",
+        country_filter, city_filter, dow, hour, names, counts, max_n);
 }
 
 int db_get_top_os(char names[][32], int counts[], int max_n,
-                  const char *country_filter, const char *city_filter) {
+    const char *country_filter, const char *city_filter, int dow, int hour)
+{
     if (!g_db || max_n <= 0) return 0;
-    return device_query(
-        "SELECT COALESCE(os,'Unknown') as o, COUNT(*) as cnt FROM visits"
-        " WHERE country NOT IN ('Unknown','Localhost','Local','','-') GROUP BY o ORDER BY cnt DESC LIMIT ?",
-        "SELECT COALESCE(os,'Unknown') as o, COUNT(*) as cnt FROM visits"
-        " WHERE country=? GROUP BY o ORDER BY cnt DESC LIMIT ?",
-        "SELECT COALESCE(os,'Unknown') as o, COUNT(*) as cnt FROM visits"
-        " WHERE city=? GROUP BY o ORDER BY cnt DESC LIMIT ?",
-        "SELECT COALESCE(os,'Unknown') as o, COUNT(*) as cnt FROM visits"
-        " WHERE country=? AND city=? GROUP BY o ORDER BY cnt DESC LIMIT ?",
-        "Unknown", country_filter, city_filter, names, counts, max_n);
+    return device_query("os", "Unknown",
+        country_filter, city_filter, dow, hour, names, counts, max_n);
 }
 
-int db_get_top_cities(char names[][64], int counts[], int max_n, const char *country_filter) {
+int db_get_top_cities(char names[][64], int counts[], int max_n,
+    const char *country_filter, int dow, int hour)
+{
     if (!g_db || max_n <= 0) return 0;
 
+    int has_country = country_filter && country_filter[0] != '\0';
+
+    char sql[512];
+    int pos = snprintf(sql, sizeof(sql),
+        "SELECT city, COUNT(*) AS cnt FROM visits"
+        " WHERE city NOT IN ('Unknown','Localhost','Local','','-')");
+    if (has_country)
+        pos += snprintf(sql + pos, sizeof(sql) - (size_t)pos, " AND country = ?");
+    if (dow >= 0 && dow < 7)
+        pos += snprintf(sql + pos, sizeof(sql) - (size_t)pos,
+            " AND CAST(strftime('%%w', timestamp) AS INTEGER) = ?");
+    if (hour >= 0 && hour < 24)
+        pos += snprintf(sql + pos, sizeof(sql) - (size_t)pos,
+            " AND CAST(strftime('%%H', timestamp) AS INTEGER) = ?");
+    snprintf(sql + pos, sizeof(sql) - (size_t)pos,
+        " GROUP BY city ORDER BY cnt DESC LIMIT ?");
+
     sqlite3_stmt *stmt = NULL;
-    int has_filter = country_filter && country_filter[0] != '\0';
+    if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK) return 0;
 
-    const char *sql_filtered =
-        "SELECT city, COUNT(*) as cnt "
-        "FROM visits "
-        "WHERE country = ? AND city NOT IN ('Unknown', 'Localhost', 'Local', '', '-') "
-        "GROUP BY city "
-        "ORDER BY cnt DESC "
-        "LIMIT ?;";
-
-    const char *sql_all =
-        "SELECT city, COUNT(*) as cnt "
-        "FROM visits "
-        "WHERE city NOT IN ('Unknown', 'Localhost', 'Local', '', '-') "
-        "GROUP BY city "
-        "ORDER BY cnt DESC "
-        "LIMIT ?;";
-
-    if (sqlite3_prepare_v2(g_db, has_filter ? sql_filtered : sql_all, -1, &stmt, NULL) != SQLITE_OK)
-        return 0;
-
-    if (has_filter) {
-        sqlite3_bind_text(stmt, 1, country_filter, -1, SQLITE_STATIC);
-        sqlite3_bind_int(stmt, 2, max_n);
-    } else {
-        sqlite3_bind_int(stmt, 1, max_n);
-    }
+    int b = 1;
+    if (has_country) sqlite3_bind_text(stmt, b++, country_filter, -1, SQLITE_STATIC);
+    if (dow  >= 0 && dow  < 7)  sqlite3_bind_int(stmt, b++, dow);
+    if (hour >= 0 && hour < 24) sqlite3_bind_int(stmt, b++, hour);
+    sqlite3_bind_int(stmt, b, max_n);
 
     int n = 0;
     while (sqlite3_step(stmt) == SQLITE_ROW && n < max_n) {
         const char *name = (const char *)sqlite3_column_text(stmt, 0);
-        int cnt = sqlite3_column_int(stmt, 1);
-
         strncpy(names[n], name ? name : "", 63);
         names[n][63] = '\0';
-        counts[n] = cnt;
+        counts[n] = sqlite3_column_int(stmt, 1);
         n++;
     }
-
     sqlite3_finalize(stmt);
     return n;
 }
