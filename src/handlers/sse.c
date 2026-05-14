@@ -83,9 +83,11 @@ static int sse_build_json(char *buf, size_t size) {
     pos += snprintf(buf + pos, size - (size_t)pos,
         "{\"stats\":{"
         "\"total_visits\":%d,"
+        "\"unique_visitors\":%d,"
         "\"unique_countries\":%d,"
         "\"top_countries\":[",
         stats.total_visits,
+        stats.unique_visitors,
         stats.unique_countries);
 
     for (int i = 0; i < stats.top_len && pos < (int)size - 64; i++) {
