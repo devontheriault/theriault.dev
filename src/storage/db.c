@@ -143,47 +143,55 @@ double db_get_avg_time_on_page(void) {
 /* Appends filter conditions to a SQL buffer. unknown_guard=1 adds the country
    exclusion list when no geo filter is active. Returns updated pos. */
 static int sql_append_filters(char *buf, size_t sz, int pos,
-    const char *country, const char *city, int dow, int hour, int unknown_guard)
+    const char *country, const char *city, int dow, int hour,
+    const char *browser, const char *device_type, const char *os,
+    int unknown_guard)
 {
     if (unknown_guard && !(country && country[0]) && !(city && city[0]))
         pos += snprintf(buf + pos, sz - (size_t)pos,
             " AND country NOT IN ('Unknown','Localhost','Local','','-')");
-    if (country && country[0])
-        pos += snprintf(buf + pos, sz - (size_t)pos, " AND country = ?");
-    if (city && city[0])
-        pos += snprintf(buf + pos, sz - (size_t)pos, " AND city = ?");
+    if (country     && country[0])     pos += snprintf(buf + pos, sz - (size_t)pos, " AND country = ?");
+    if (city        && city[0])        pos += snprintf(buf + pos, sz - (size_t)pos, " AND city = ?");
     if (dow >= 0 && dow < 7)
         pos += snprintf(buf + pos, sz - (size_t)pos,
             " AND CAST(strftime('%%w', timestamp) AS INTEGER) = ?");
     if (hour >= 0 && hour < 24)
         pos += snprintf(buf + pos, sz - (size_t)pos,
             " AND CAST(strftime('%%H', timestamp) AS INTEGER) = ?");
+    if (browser     && browser[0])     pos += snprintf(buf + pos, sz - (size_t)pos, " AND browser = ?");
+    if (device_type && device_type[0]) pos += snprintf(buf + pos, sz - (size_t)pos, " AND device_type = ?");
+    if (os          && os[0])          pos += snprintf(buf + pos, sz - (size_t)pos, " AND os = ?");
     return pos;
 }
 
-/* Binds filter values in order: country, city, dow, hour.
+/* Binds filter values in order: country, city, dow, hour, browser, device_type, os.
    Returns the next bind index. */
 static int sql_bind_filters(sqlite3_stmt *stmt, int b,
-    const char *country, const char *city, int dow, int hour)
+    const char *country, const char *city, int dow, int hour,
+    const char *browser, const char *device_type, const char *os)
 {
-    if (country && country[0]) sqlite3_bind_text(stmt, b++, country, -1, SQLITE_STATIC);
-    if (city    && city[0])    sqlite3_bind_text(stmt, b++, city,    -1, SQLITE_STATIC);
-    if (dow  >= 0 && dow  < 7)  sqlite3_bind_int(stmt, b++, dow);
-    if (hour >= 0 && hour < 24) sqlite3_bind_int(stmt, b++, hour);
+    if (country     && country[0])     sqlite3_bind_text(stmt, b++, country,     -1, SQLITE_STATIC);
+    if (city        && city[0])        sqlite3_bind_text(stmt, b++, city,        -1, SQLITE_STATIC);
+    if (dow  >= 0 && dow  < 7)         sqlite3_bind_int (stmt, b++, dow);
+    if (hour >= 0 && hour < 24)        sqlite3_bind_int (stmt, b++, hour);
+    if (browser     && browser[0])     sqlite3_bind_text(stmt, b++, browser,     -1, SQLITE_STATIC);
+    if (device_type && device_type[0]) sqlite3_bind_text(stmt, b++, device_type, -1, SQLITE_STATIC);
+    if (os          && os[0])          sqlite3_bind_text(stmt, b++, os,          -1, SQLITE_STATIC);
     return b;
 }
 
 static int scalar_query_filtered(const char *select_expr,
-    const char *country, const char *city, int dow, int hour)
+    const char *country, const char *city, int dow, int hour,
+    const char *browser, const char *device_type, const char *os)
 {
-    char sql[512];
+    char sql[768];
     int pos = snprintf(sql, sizeof(sql),
         "SELECT %s FROM visits WHERE 1=1", select_expr);
-    pos = sql_append_filters(sql, sizeof(sql), pos, country, city, dow, hour, 1);
+    pos = sql_append_filters(sql, sizeof(sql), pos, country, city, dow, hour, browser, device_type, os, 1);
 
     sqlite3_stmt *stmt = NULL;
     if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK) return 0;
-    sql_bind_filters(stmt, 1, country, city, dow, hour);
+    sql_bind_filters(stmt, 1, country, city, dow, hour, browser, device_type, os);
 
     int result = 0;
     if (sqlite3_step(stmt) == SQLITE_ROW) result = sqlite3_column_int(stmt, 0);
@@ -191,36 +199,40 @@ static int scalar_query_filtered(const char *select_expr,
     return result;
 }
 
-int db_get_total_visits(const char *country, const char *city, int dow, int hour) {
+int db_get_total_visits(const char *country, const char *city, int dow, int hour,
+    const char *browser, const char *device_type, const char *os) {
     if (!g_db) return 0;
-    return scalar_query_filtered("COUNT(*)", country, city, dow, hour);
+    return scalar_query_filtered("COUNT(*)", country, city, dow, hour, browser, device_type, os);
 }
 
-int db_get_unique_visitors(const char *country, const char *city, int dow, int hour) {
+int db_get_unique_visitors(const char *country, const char *city, int dow, int hour,
+    const char *browser, const char *device_type, const char *os) {
     if (!g_db) return 0;
     return scalar_query_filtered(
         "COUNT(DISTINCT ip||'|'||user_agent||'|'||date(timestamp))",
-        country, city, dow, hour);
+        country, city, dow, hour, browser, device_type, os);
 }
 
-int db_get_unique_countries(const char *country, const char *city, int dow, int hour) {
+int db_get_unique_countries(const char *country, const char *city, int dow, int hour,
+    const char *browser, const char *device_type, const char *os) {
     if (!g_db) return 0;
-    return scalar_query_filtered("COUNT(DISTINCT country)", country, city, dow, hour);
+    return scalar_query_filtered("COUNT(DISTINCT country)", country, city, dow, hour, browser, device_type, os);
 }
 
-int db_get_top_countries(char names[][64], int counts[], int max_n, int dow, int hour) {
+int db_get_top_countries(char names[][64], int counts[], int max_n, int dow, int hour,
+    const char *browser, const char *device_type, const char *os) {
     if (!g_db || max_n <= 0) return 0;
 
-    char sql[512];
+    char sql[768];
     int pos = snprintf(sql, sizeof(sql),
         "SELECT country, COUNT(*) AS cnt FROM visits WHERE 1=1");
-    pos = sql_append_filters(sql, sizeof(sql), pos, NULL, NULL, dow, hour, 1);
+    pos = sql_append_filters(sql, sizeof(sql), pos, NULL, NULL, dow, hour, browser, device_type, os, 1);
     snprintf(sql + pos, sizeof(sql) - (size_t)pos,
         " GROUP BY country ORDER BY cnt DESC LIMIT ?");
 
     sqlite3_stmt *stmt = NULL;
     if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK) return 0;
-    int b = sql_bind_filters(stmt, 1, NULL, NULL, dow, hour);
+    int b = sql_bind_filters(stmt, 1, NULL, NULL, dow, hour, browser, device_type, os);
     sqlite3_bind_int(stmt, b, max_n);
 
     int n = 0;
@@ -322,58 +334,27 @@ int db_get_all_countries(char names[][64], int counts[], int max_n) {
     return n;
 }
 
-int db_get_heatmap_data(int counts[7][24], const char *country_filter, const char *city_filter) {
+int db_get_heatmap_data(int counts[7][24], const char *country_filter, const char *city_filter,
+    const char *browser_filter, const char *device_type_filter, const char *os_filter) {
     if (!g_db) return 0;
 
     memset(counts, 0, 7 * 24 * sizeof(int));
 
-    int has_country = country_filter && country_filter[0] != '\0';
-    int has_city    = city_filter    && city_filter[0]    != '\0';
-
-    const char *sql_all =
-        "SELECT CAST(strftime('%w', timestamp) AS INTEGER) as dow,"
-        "       CAST(strftime('%H', timestamp) AS INTEGER) as hr,"
+    char sql[1024];
+    int pos = snprintf(sql, sizeof(sql),
+        "SELECT CAST(strftime('%%w', timestamp) AS INTEGER) as dow,"
+        "       CAST(strftime('%%H', timestamp) AS INTEGER) as hr,"
         "       COUNT(*) as cnt "
-        "FROM visits "
-        "WHERE country NOT IN ('Unknown', 'Localhost', 'Local', '', '-') "
-        "GROUP BY dow, hr;";
-
-    const char *sql_country =
-        "SELECT CAST(strftime('%w', timestamp) AS INTEGER) as dow,"
-        "       CAST(strftime('%H', timestamp) AS INTEGER) as hr,"
-        "       COUNT(*) as cnt "
-        "FROM visits WHERE country = ? GROUP BY dow, hr;";
-
-    const char *sql_city =
-        "SELECT CAST(strftime('%w', timestamp) AS INTEGER) as dow,"
-        "       CAST(strftime('%H', timestamp) AS INTEGER) as hr,"
-        "       COUNT(*) as cnt "
-        "FROM visits WHERE city = ? GROUP BY dow, hr;";
-
-    const char *sql_both =
-        "SELECT CAST(strftime('%w', timestamp) AS INTEGER) as dow,"
-        "       CAST(strftime('%H', timestamp) AS INTEGER) as hr,"
-        "       COUNT(*) as cnt "
-        "FROM visits WHERE country = ? AND city = ? GROUP BY dow, hr;";
-
-    const char *sql;
-    if      (has_country && has_city) sql = sql_both;
-    else if (has_country)             sql = sql_country;
-    else if (has_city)                sql = sql_city;
-    else                              sql = sql_all;
+        "FROM visits WHERE 1=1");
+    pos = sql_append_filters(sql, sizeof(sql), pos,
+        country_filter, city_filter, -1, -1,
+        browser_filter, device_type_filter, os_filter, 1);
+    snprintf(sql + pos, sizeof(sql) - (size_t)pos, " GROUP BY dow, hr");
 
     sqlite3_stmt *stmt = NULL;
-    if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK)
-        return 0;
-
-    if (has_country && has_city) {
-        sqlite3_bind_text(stmt, 1, country_filter, -1, SQLITE_STATIC);
-        sqlite3_bind_text(stmt, 2, city_filter,    -1, SQLITE_STATIC);
-    } else if (has_country) {
-        sqlite3_bind_text(stmt, 1, country_filter, -1, SQLITE_STATIC);
-    } else if (has_city) {
-        sqlite3_bind_text(stmt, 1, city_filter, -1, SQLITE_STATIC);
-    }
+    if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK) return 0;
+    sql_bind_filters(stmt, 1, country_filter, city_filter, -1, -1,
+        browser_filter, device_type_filter, os_filter);
 
     int max_count = 0;
     while (sqlite3_step(stmt) == SQLITE_ROW) {
@@ -393,19 +374,22 @@ int db_get_heatmap_data(int counts[7][24], const char *country_filter, const cha
 static int device_query(const char *col, const char *fallback,
     const char *country_filter, const char *city_filter,
     int dow, int hour,
+    const char *browser_filter, const char *device_type_filter, const char *os_filter,
     char names[][32], int counts[], int max_n)
 {
-    char sql[640];
+    char sql[900];
     int pos = snprintf(sql, sizeof(sql),
         "SELECT COALESCE(%s,'%s') AS v, COUNT(*) AS cnt FROM visits WHERE 1=1",
         col, fallback);
-    pos = sql_append_filters(sql, sizeof(sql), pos, country_filter, city_filter, dow, hour, 1);
+    pos = sql_append_filters(sql, sizeof(sql), pos, country_filter, city_filter, dow, hour,
+        browser_filter, device_type_filter, os_filter, 1);
     snprintf(sql + pos, sizeof(sql) - (size_t)pos,
         " GROUP BY COALESCE(%s,'%s') ORDER BY cnt DESC LIMIT ?", col, fallback);
 
     sqlite3_stmt *stmt = NULL;
     if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK) return 0;
-    int b = sql_bind_filters(stmt, 1, country_filter, city_filter, dow, hour);
+    int b = sql_bind_filters(stmt, 1, country_filter, city_filter, dow, hour,
+        browser_filter, device_type_filter, os_filter);
     sqlite3_bind_int(stmt, b, max_n);
 
     int n = 0;
@@ -421,37 +405,47 @@ static int device_query(const char *col, const char *fallback,
 }
 
 int db_get_top_browsers(char names[][32], int counts[], int max_n,
-    const char *country_filter, const char *city_filter, int dow, int hour)
+    const char *country_filter, const char *city_filter, int dow, int hour,
+    const char *device_type_filter, const char *os_filter)
 {
     if (!g_db || max_n <= 0) return 0;
     return device_query("browser", "Other",
-        country_filter, city_filter, dow, hour, names, counts, max_n);
+        country_filter, city_filter, dow, hour,
+        NULL, device_type_filter, os_filter,
+        names, counts, max_n);
 }
 
 int db_get_device_breakdown(char names[][32], int counts[], int max_n,
-    const char *country_filter, const char *city_filter, int dow, int hour)
+    const char *country_filter, const char *city_filter, int dow, int hour,
+    const char *browser_filter, const char *os_filter)
 {
     if (!g_db || max_n <= 0) return 0;
     return device_query("device_type", "Desktop",
-        country_filter, city_filter, dow, hour, names, counts, max_n);
+        country_filter, city_filter, dow, hour,
+        browser_filter, NULL, os_filter,
+        names, counts, max_n);
 }
 
 int db_get_top_os(char names[][32], int counts[], int max_n,
-    const char *country_filter, const char *city_filter, int dow, int hour)
+    const char *country_filter, const char *city_filter, int dow, int hour,
+    const char *browser_filter, const char *device_type_filter)
 {
     if (!g_db || max_n <= 0) return 0;
     return device_query("os", "Unknown",
-        country_filter, city_filter, dow, hour, names, counts, max_n);
+        country_filter, city_filter, dow, hour,
+        browser_filter, device_type_filter, NULL,
+        names, counts, max_n);
 }
 
 int db_get_top_cities(char names[][64], int counts[], int max_n,
-    const char *country_filter, int dow, int hour)
+    const char *country_filter, int dow, int hour,
+    const char *browser_filter, const char *device_type_filter, const char *os_filter)
 {
     if (!g_db || max_n <= 0) return 0;
 
     int has_country = country_filter && country_filter[0] != '\0';
 
-    char sql[512];
+    char sql[768];
     int pos = snprintf(sql, sizeof(sql),
         "SELECT city, COUNT(*) AS cnt FROM visits"
         " WHERE city NOT IN ('Unknown','Localhost','Local','','-')");
@@ -463,6 +457,12 @@ int db_get_top_cities(char names[][64], int counts[], int max_n,
     if (hour >= 0 && hour < 24)
         pos += snprintf(sql + pos, sizeof(sql) - (size_t)pos,
             " AND CAST(strftime('%%H', timestamp) AS INTEGER) = ?");
+    if (browser_filter && browser_filter[0])
+        pos += snprintf(sql + pos, sizeof(sql) - (size_t)pos, " AND browser = ?");
+    if (device_type_filter && device_type_filter[0])
+        pos += snprintf(sql + pos, sizeof(sql) - (size_t)pos, " AND device_type = ?");
+    if (os_filter && os_filter[0])
+        pos += snprintf(sql + pos, sizeof(sql) - (size_t)pos, " AND os = ?");
     snprintf(sql + pos, sizeof(sql) - (size_t)pos,
         " GROUP BY city ORDER BY cnt DESC LIMIT ?");
 
@@ -473,6 +473,9 @@ int db_get_top_cities(char names[][64], int counts[], int max_n,
     if (has_country) sqlite3_bind_text(stmt, b++, country_filter, -1, SQLITE_STATIC);
     if (dow  >= 0 && dow  < 7)  sqlite3_bind_int(stmt, b++, dow);
     if (hour >= 0 && hour < 24) sqlite3_bind_int(stmt, b++, hour);
+    if (browser_filter     && browser_filter[0])     sqlite3_bind_text(stmt, b++, browser_filter,     -1, SQLITE_STATIC);
+    if (device_type_filter && device_type_filter[0]) sqlite3_bind_text(stmt, b++, device_type_filter, -1, SQLITE_STATIC);
+    if (os_filter          && os_filter[0])          sqlite3_bind_text(stmt, b++, os_filter,          -1, SQLITE_STATIC);
     sqlite3_bind_int(stmt, b, max_n);
 
     int n = 0;

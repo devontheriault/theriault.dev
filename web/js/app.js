@@ -3,10 +3,13 @@
 const POLL_INTERVAL_MS = 5000;
 
 /* ---- State ---- */
-let activeCountry = null;
-let activeCity    = null;
-let activeDow  = null;
-let activeHour = null;
+let activeCountry    = null;
+let activeCity       = null;
+let activeDow        = null;
+let activeHour       = null;
+let activeBrowser    = null;
+let activeDeviceType = null;
+let activeOs         = null;
 
 /* ---- DOM references ---- */
 const elHeatmapGrid      = document.getElementById('heatmap-grid');
@@ -31,6 +34,12 @@ const elHeatmapDowClear  = document.getElementById('heatmap-dow-clear');
 const elHeatmapDowLabel  = document.getElementById('heatmap-dow-label');
 const elHeatmapHourClear = document.getElementById('heatmap-hour-clear');
 const elHeatmapHourLabel = document.getElementById('heatmap-hour-label');
+const elBrowserClear     = document.getElementById('browser-clear');
+const elBrowserLabel     = document.getElementById('browser-label');
+const elDeviceClear      = document.getElementById('device-clear');
+const elDeviceLabel      = document.getElementById('device-label');
+const elOsClear          = document.getElementById('os-clear');
+const elOsLabel          = document.getElementById('os-label');
 
 /* ---- Filter UI ---- */
 function updateFilterUI() {
@@ -63,6 +72,34 @@ function updateFilterUI() {
         elHeatmapHourClear.style.display = activeHour !== null ? '' : 'none';
         elHeatmapHourLabel.textContent   = activeHour !== null
             ? (String(activeHour).padStart(2, '0') + ':00') : '';
+    }
+    if (elBrowserClear && elBrowserLabel) {
+        elBrowserClear.style.display = activeBrowser ? '' : 'none';
+        elBrowserLabel.textContent   = activeBrowser || '';
+    }
+    if (elDeviceClear && elDeviceLabel) {
+        elDeviceClear.style.display = activeDeviceType ? '' : 'none';
+        elDeviceLabel.textContent   = activeDeviceType || '';
+    }
+    if (elOsClear && elOsLabel) {
+        elOsClear.style.display = activeOs ? '' : 'none';
+        elOsLabel.textContent   = activeOs || '';
+    }
+    // Update active highlights in browser/device/os lists
+    if (elBrowserList) {
+        elBrowserList.querySelectorAll('.country-item').forEach(function(el) {
+            el.classList.toggle('active', el.getAttribute('data-browser') === activeBrowser);
+        });
+    }
+    if (elDeviceList) {
+        elDeviceList.querySelectorAll('.country-item').forEach(function(el) {
+            el.classList.toggle('active', el.getAttribute('data-device_type') === activeDeviceType);
+        });
+    }
+    if (elOsList) {
+        elOsList.querySelectorAll('.country-item').forEach(function(el) {
+            el.classList.toggle('active', el.getAttribute('data-os') === activeOs);
+        });
     }
     updateHeatmapHighlight();
 }
@@ -186,7 +223,8 @@ function renderBarList(container, items, nameKey, activeValue, iconFn) {
         return;
     }
     const maxCount = items[0].count || 1;
-    const isClickable = nameKey === 'country' || nameKey === 'city';
+    const isClickable = nameKey === 'country' || nameKey === 'city'
+        || nameKey === 'browser' || nameKey === 'device_type' || nameKey === 'os';
 
     container.innerHTML = items.map(function(item) {
         const name = item[nameKey] || '';
@@ -242,13 +280,13 @@ function renderStats(data) {
     }
 
     if (elBrowserList) {
-        renderBarList(elBrowserList, data.browsers || [], 'browser', null, browserIcon);
+        renderBarList(elBrowserList, data.browsers || [], 'browser', activeBrowser, browserIcon);
     }
     if (elDeviceList) {
-        renderBarList(elDeviceList, data.device_types || [], 'device_type', null, deviceIcon);
+        renderBarList(elDeviceList, data.device_types || [], 'device_type', activeDeviceType, deviceIcon);
     }
     if (elOsList) {
-        renderBarList(elOsList, data.os || [], 'os', null, osIcon);
+        renderBarList(elOsList, data.os || [], 'os', activeOs, osIcon);
     }
 
     updateFilterUI();
@@ -296,8 +334,11 @@ function renderHeatmap(data) {
 
 function fetchHeatmap() {
     var params = [];
-    if (activeCountry) params.push('country=' + encodeURIComponent(activeCountry));
-    if (activeCity)    params.push('city='    + encodeURIComponent(activeCity));
+    if (activeCountry)    params.push('country='     + encodeURIComponent(activeCountry));
+    if (activeCity)       params.push('city='        + encodeURIComponent(activeCity));
+    if (activeBrowser)    params.push('browser='     + encodeURIComponent(activeBrowser));
+    if (activeDeviceType) params.push('device_type=' + encodeURIComponent(activeDeviceType));
+    if (activeOs)         params.push('os='          + encodeURIComponent(activeOs));
     var url = '/heatmap' + (params.length ? '?' + params.join('&') : '');
     fetch(url)
         .then(function(res) { return res.json(); })
@@ -308,10 +349,13 @@ function fetchHeatmap() {
 /* ---- Fetch ---- */
 function fetchStats() {
     var params = [];
-    if (activeCountry)    params.push('country=' + encodeURIComponent(activeCountry));
-    if (activeCity)       params.push('city='    + encodeURIComponent(activeCity));
-    if (activeDow  !== null) params.push('dow='  + activeDow);
-    if (activeHour !== null) params.push('hour=' + activeHour);
+    if (activeCountry)       params.push('country='     + encodeURIComponent(activeCountry));
+    if (activeCity)          params.push('city='        + encodeURIComponent(activeCity));
+    if (activeDow  !== null) params.push('dow='         + activeDow);
+    if (activeHour !== null) params.push('hour='        + activeHour);
+    if (activeBrowser)       params.push('browser='     + encodeURIComponent(activeBrowser));
+    if (activeDeviceType)    params.push('device_type=' + encodeURIComponent(activeDeviceType));
+    if (activeOs)            params.push('os='          + encodeURIComponent(activeOs));
     var url = '/stats' + (params.length ? '?' + params.join('&') : '');
 
     return fetch(url)
@@ -352,6 +396,70 @@ if (elCityList) {
         elCityList.querySelectorAll('.country-item').forEach(function(el) {
             el.classList.toggle('active', el.getAttribute('data-city') === activeCity);
         });
+        updateFilterUI();
+        fetchStats();
+        fetchHeatmap();
+    });
+}
+
+/* ---- Browser / Device / OS click filters ---- */
+if (elBrowserList) {
+    elBrowserList.addEventListener('click', function(e) {
+        const item = e.target.closest('.country-item.clickable');
+        if (!item) return;
+        const val = item.getAttribute('data-browser');
+        activeBrowser = (activeBrowser === val) ? null : val;
+        updateFilterUI();
+        fetchStats();
+        fetchHeatmap();
+    });
+}
+
+if (elDeviceList) {
+    elDeviceList.addEventListener('click', function(e) {
+        const item = e.target.closest('.country-item.clickable');
+        if (!item) return;
+        const val = item.getAttribute('data-device_type');
+        activeDeviceType = (activeDeviceType === val) ? null : val;
+        updateFilterUI();
+        fetchStats();
+        fetchHeatmap();
+    });
+}
+
+if (elOsList) {
+    elOsList.addEventListener('click', function(e) {
+        const item = e.target.closest('.country-item.clickable');
+        if (!item) return;
+        const val = item.getAttribute('data-os');
+        activeOs = (activeOs === val) ? null : val;
+        updateFilterUI();
+        fetchStats();
+        fetchHeatmap();
+    });
+}
+
+if (elBrowserClear) {
+    elBrowserClear.addEventListener('click', function() {
+        activeBrowser = null;
+        updateFilterUI();
+        fetchStats();
+        fetchHeatmap();
+    });
+}
+
+if (elDeviceClear) {
+    elDeviceClear.addEventListener('click', function() {
+        activeDeviceType = null;
+        updateFilterUI();
+        fetchStats();
+        fetchHeatmap();
+    });
+}
+
+if (elOsClear) {
+    elOsClear.addEventListener('click', function() {
+        activeOs = null;
         updateFilterUI();
         fetchStats();
         fetchHeatmap();
@@ -534,7 +642,8 @@ function initSSE() {
         try {
             var payload = JSON.parse(e.data);
             /* Only overwrite stats/heatmap when no filter is active */
-            if (!activeCountry && !activeCity && activeDow === null && activeHour === null) {
+            if (!activeCountry && !activeCity && activeDow === null && activeHour === null
+                    && !activeBrowser && !activeDeviceType && !activeOs) {
                 if (payload.stats)   renderStats(payload.stats);
                 if (payload.heatmap) renderHeatmap(payload.heatmap);
             }

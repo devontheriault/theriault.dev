@@ -32,10 +32,16 @@ static void parse_query_param(const char *path, const char *key,
 }
 
 void handle_stats(int client_fd, const HttpRequest *req) {
-    char country_filter[64] = {0};
-    char city_filter[64]    = {0};
-    parse_query_param(req->path, "country", country_filter, sizeof(country_filter));
-    parse_query_param(req->path, "city",    city_filter,    sizeof(city_filter));
+    char country_filter[64]     = {0};
+    char city_filter[64]        = {0};
+    char browser_filter[32]     = {0};
+    char device_type_filter[32] = {0};
+    char os_filter[32]          = {0};
+    parse_query_param(req->path, "country",     country_filter,     sizeof(country_filter));
+    parse_query_param(req->path, "city",        city_filter,        sizeof(city_filter));
+    parse_query_param(req->path, "browser",     browser_filter,     sizeof(browser_filter));
+    parse_query_param(req->path, "device_type", device_type_filter, sizeof(device_type_filter));
+    parse_query_param(req->path, "os",          os_filter,          sizeof(os_filter));
 
     char dow_str[8]  = {0};
     char hour_str[8] = {0};
@@ -46,7 +52,8 @@ void handle_stats(int client_fd, const HttpRequest *req) {
     if (dow  < 0 || dow  > 6)  dow  = -1;
     if (hour < 0 || hour > 23) hour = -1;
 
-    StatsResult stats = analytics_get_stats(country_filter, city_filter, dow, hour);
+    StatsResult stats = analytics_get_stats(country_filter, city_filter, dow, hour,
+        browser_filter, device_type_filter, os_filter);
 
     /* Build the JSON body */
     char body[32768];

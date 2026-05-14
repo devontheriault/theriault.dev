@@ -24,6 +24,6 @@ typedef struct {
     double avg_time_on_page;
 } StatsResult;
 
-StatsResult analytics_get_stats(const char *country_filter, const char *city_filter, int dow, int hour);
+StatsResult analytics_get_stats(const char *country_filter, const char *city_filter, int dow, int hour, const char *browser_filter, const char *device_type_filter, const char *os_filter);
 
 #endif /* ANALYTICS_H */

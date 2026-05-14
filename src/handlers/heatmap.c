@@ -28,13 +28,20 @@ static void parse_query_param(const char *path, const char *key,
 }
 
 void handle_heatmap(int client_fd, const HttpRequest *req) {
-    char country_filter[64] = {0};
-    char city_filter[64]    = {0};
-    parse_query_param(req->path, "country", country_filter, sizeof(country_filter));
-    parse_query_param(req->path, "city",    city_filter,    sizeof(city_filter));
+    char country_filter[64]     = {0};
+    char city_filter[64]        = {0};
+    char browser_filter[32]     = {0};
+    char device_type_filter[32] = {0};
+    char os_filter[32]          = {0};
+    parse_query_param(req->path, "country",     country_filter,     sizeof(country_filter));
+    parse_query_param(req->path, "city",        city_filter,        sizeof(city_filter));
+    parse_query_param(req->path, "browser",     browser_filter,     sizeof(browser_filter));
+    parse_query_param(req->path, "device_type", device_type_filter, sizeof(device_type_filter));
+    parse_query_param(req->path, "os",          os_filter,          sizeof(os_filter));
 
     int counts[7][24];
-    int max_count = db_get_heatmap_data(counts, country_filter, city_filter);
+    int max_count = db_get_heatmap_data(counts, country_filter, city_filter,
+        browser_filter, device_type_filter, os_filter);
 
     char body[4096];
     int pos = 0;
