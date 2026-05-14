@@ -9,6 +9,7 @@ let activeCity    = null;
 /* ---- DOM references ---- */
 const elHeatmapGrid      = document.getElementById('heatmap-grid');
 const elHeatmapHourLabels = document.getElementById('heatmap-hour-labels');
+const elUniqueVisitors   = document.getElementById('unique-visitors');
 const elTotalVisits      = document.getElementById('total-visits');
 const elUniqueCountries  = document.getElementById('unique-countries');
 const elCountryList      = document.getElementById('country-list');
@@ -174,6 +175,9 @@ function renderBarList(container, items, nameKey, activeValue, iconFn) {
 }
 
 function renderStats(data) {
+    if (elUniqueVisitors) {
+        elUniqueVisitors.textContent = formatNumber(data.unique_visitors || 0);
+    }
     if (elTotalVisits) {
         elTotalVisits.textContent = formatNumber(data.total_visits || 0);
     }

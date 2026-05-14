@@ -157,6 +157,26 @@ int db_get_total_visits(void) {
     return total;
 }
 
+int db_get_unique_visitors(void) {
+    if (!g_db) return 0;
+
+    const char *sql =
+        "SELECT COUNT(DISTINCT ip || '|' || user_agent || '|' || date(timestamp)) "
+        "FROM visits "
+        "WHERE country NOT IN ('Unknown', 'Localhost', 'Local', '', '-');";
+    sqlite3_stmt *stmt = NULL;
+
+    if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK)
+        return 0;
+
+    int count = 0;
+    if (sqlite3_step(stmt) == SQLITE_ROW)
+        count = sqlite3_column_int(stmt, 0);
+
+    sqlite3_finalize(stmt);
+    return count;
+}
+
 int db_get_unique_countries(void) {
     if (!g_db) return 0;
 

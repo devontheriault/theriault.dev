@@ -45,9 +45,11 @@ void handle_stats(int client_fd, const HttpRequest *req) {
     pos += snprintf(body + pos, sizeof(body) - (size_t)pos,
         "{"
         "\"total_visits\":%d,"
+        "\"unique_visitors\":%d,"
         "\"unique_countries\":%d,"
         "\"top_countries\":[",
         stats.total_visits,
+        stats.unique_visitors,
         stats.unique_countries);
 
     for (int i = 0; i < stats.top_len && pos < (int)sizeof(body) - 64; i++) {

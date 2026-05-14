@@ -3,6 +3,7 @@
 
 typedef struct {
     int  total_visits;
+    int  unique_visitors;
     int  unique_countries;
     char top_countries[50][64];
     int  top_counts[50];

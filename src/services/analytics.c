@@ -7,6 +7,7 @@ StatsResult analytics_get_stats(const char *country_filter, const char *city_fil
     memset(&result, 0, sizeof(result));
 
     result.total_visits     = db_get_total_visits();
+    result.unique_visitors  = db_get_unique_visitors();
     result.unique_countries = db_get_unique_countries();
     result.top_len          = db_get_top_countries(result.top_countries,
                                                    result.top_counts, 50);

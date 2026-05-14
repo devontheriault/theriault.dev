@@ -7,6 +7,7 @@ int    db_insert_visit(const char *ip, const char *country, const char *city, co
 int    db_update_visit_duration(const char *ip, const char *user_agent, int seconds);
 double db_get_avg_time_on_page(void);
 int  db_get_total_visits(void);
+int  db_get_unique_visitors(void);
 int  db_get_unique_countries(void);
 int  db_get_top_countries(char names[][64], int counts[], int max_n);
 int  db_get_all_countries(char names[][64], int counts[], int max_n);
