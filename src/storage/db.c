@@ -247,15 +247,13 @@ int db_get_top_countries(char names[][64], int counts[], int max_n, int dow, int
     return n;
 }
 
-int db_get_city_globe_data(char cities[][64], char countries[][64], int counts[], double lats[], double lngs[], int max_n) {
+int db_get_city_globe_data(char cities[][64], char countries[][64], int counts[], double lats[], double lngs[], int max_n,
+    const char *country_filter, const char *city_filter, int dow, int hour,
+    const char *browser_filter, const char *device_type_filter, const char *os_filter) {
     if (!g_db || max_n <= 0) return 0;
 
-    /* Group by both city and country so same-named cities in different
-       countries are treated as distinct points. Fallback coordinates also
-       filter by country to avoid cross-country coordinate bleed. */
-    /* NULLIF(AVG(...), 0) converts a zero average (stored when geo lookup
-       failed) to NULL so COALESCE falls through to the ip_ranges fallback. */
-    const char *sql =
+    char sql[1536];
+    int pos = snprintf(sql, sizeof(sql),
         "SELECT v.city, v.country, COUNT(*) as cnt,"
         "  COALESCE(NULLIF(AVG(v.lat), 0),"
         "    (SELECT r.latitude  FROM ip_ranges r WHERE r.city = v.city AND r.country = v.country AND r.latitude  != 0 LIMIT 1),"
@@ -264,17 +262,22 @@ int db_get_city_globe_data(char cities[][64], char countries[][64], int counts[]
         "    (SELECT r.longitude FROM ip_ranges r WHERE r.city = v.city AND r.country = v.country AND r.longitude != 0 LIMIT 1),"
         "    (SELECT r.longitude FROM ip_ranges r WHERE r.city = v.city AND r.longitude != 0 LIMIT 1)) as clng "
         "FROM visits v "
-        "WHERE v.city NOT IN ('Unknown', 'Localhost', 'Local', '') "
-        "GROUP BY v.city, v.country "
-        "HAVING clat IS NOT NULL AND (clat != 0 OR clng != 0) "
-        "ORDER BY cnt DESC "
-        "LIMIT ?;";
+        "WHERE v.city NOT IN ('Unknown', 'Localhost', 'Local', '')");
+    pos = sql_append_filters(sql, sizeof(sql), pos, country_filter, city_filter, dow, hour,
+        browser_filter, device_type_filter, os_filter, 0);
+    snprintf(sql + pos, sizeof(sql) - (size_t)pos,
+        " GROUP BY v.city, v.country"
+        " HAVING clat IS NOT NULL AND (clat != 0 OR clng != 0)"
+        " ORDER BY cnt DESC"
+        " LIMIT ?");
 
     sqlite3_stmt *stmt = NULL;
     if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK)
         return 0;
 
-    sqlite3_bind_int(stmt, 1, max_n);
+    int b = sql_bind_filters(stmt, 1, country_filter, city_filter, dow, hour,
+        browser_filter, device_type_filter, os_filter);
+    sqlite3_bind_int(stmt, b, max_n);
 
     int n = 0;
     while (sqlite3_step(stmt) == SQLITE_ROW && n < max_n) {

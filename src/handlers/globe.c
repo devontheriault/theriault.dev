@@ -2,13 +2,55 @@
 #include "../storage/db.h"
 #include "../utils/json.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
 #define GLOBE_MAX_CITIES 200
 
+static void parse_query_param(const char *path, const char *key,
+                               char *out, size_t out_size) {
+    out[0] = '\0';
+    const char *q = strchr(path, '?');
+    if (!q) return;
+    q++;
+
+    size_t key_len = strlen(key);
+    const char *p = q;
+    while (*p) {
+        if (strncmp(p, key, key_len) == 0 && p[key_len] == '=') {
+            p += key_len + 1;
+            size_t i = 0;
+            while (*p && *p != '&' && i < out_size - 1)
+                out[i++] = *p++;
+            out[i] = '\0';
+            return;
+        }
+        while (*p && *p != '&') p++;
+        if (*p == '&') p++;
+    }
+}
+
 void handle_globe(int client_fd, const HttpRequest *req) {
-    (void)req;
+    char country_filter[64]     = {0};
+    char city_filter[64]        = {0};
+    char browser_filter[32]     = {0};
+    char device_type_filter[32] = {0};
+    char os_filter[32]          = {0};
+    parse_query_param(req->path, "country",     country_filter,     sizeof(country_filter));
+    parse_query_param(req->path, "city",        city_filter,        sizeof(city_filter));
+    parse_query_param(req->path, "browser",     browser_filter,     sizeof(browser_filter));
+    parse_query_param(req->path, "device_type", device_type_filter, sizeof(device_type_filter));
+    parse_query_param(req->path, "os",          os_filter,          sizeof(os_filter));
+
+    char dow_str[8]  = {0};
+    char hour_str[8] = {0};
+    parse_query_param(req->path, "dow",  dow_str,  sizeof(dow_str));
+    parse_query_param(req->path, "hour", hour_str, sizeof(hour_str));
+    int dow  = (dow_str[0]  != '\0') ? (int)strtol(dow_str,  NULL, 10) : -1;
+    int hour = (hour_str[0] != '\0') ? (int)strtol(hour_str, NULL, 10) : -1;
+    if (dow  < 0 || dow  > 6)  dow  = -1;
+    if (hour < 0 || hour > 23) hour = -1;
 
     char   cities[GLOBE_MAX_CITIES][64];
     char   countries[GLOBE_MAX_CITIES][64];
@@ -16,7 +58,8 @@ void handle_globe(int client_fd, const HttpRequest *req) {
     double lats[GLOBE_MAX_CITIES];
     double lngs[GLOBE_MAX_CITIES];
 
-    int n = db_get_city_globe_data(cities, countries, counts, lats, lngs, GLOBE_MAX_CITIES);
+    int n = db_get_city_globe_data(cities, countries, counts, lats, lngs, GLOBE_MAX_CITIES,
+        country_filter, city_filter, dow, hour, browser_filter, device_type_filter, os_filter);
 
     char body[32768];
     int  pos = 0;

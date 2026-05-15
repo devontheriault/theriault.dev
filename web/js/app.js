@@ -332,6 +332,19 @@ function renderHeatmap(data) {
     updateHeatmapHighlight();
 }
 
+function fetchGlobe() {
+    var params = [];
+    if (activeCountry)       params.push('country='     + encodeURIComponent(activeCountry));
+    if (activeCity)          params.push('city='        + encodeURIComponent(activeCity));
+    if (activeDow  !== null) params.push('dow='         + activeDow);
+    if (activeHour !== null) params.push('hour='        + activeHour);
+    if (activeBrowser)       params.push('browser='     + encodeURIComponent(activeBrowser));
+    if (activeDeviceType)    params.push('device_type=' + encodeURIComponent(activeDeviceType));
+    if (activeOs)            params.push('os='          + encodeURIComponent(activeOs));
+    var qs = params.length ? '?' + params.join('&') : '';
+    if (window._fetchGlobeFn) window._fetchGlobeFn(qs);
+}
+
 function fetchHeatmap() {
     var params = [];
     if (activeCountry)    params.push('country='     + encodeURIComponent(activeCountry));
@@ -383,6 +396,7 @@ if (elCountryList) {
         updateFilterUI();
         fetchStats();
         fetchHeatmap();
+        fetchGlobe();
     });
 }
 
@@ -399,6 +413,7 @@ if (elCityList) {
         updateFilterUI();
         fetchStats();
         fetchHeatmap();
+        fetchGlobe();
     });
 }
 
@@ -412,6 +427,7 @@ if (elBrowserList) {
         updateFilterUI();
         fetchStats();
         fetchHeatmap();
+        fetchGlobe();
     });
 }
 
@@ -424,6 +440,7 @@ if (elDeviceList) {
         updateFilterUI();
         fetchStats();
         fetchHeatmap();
+        fetchGlobe();
     });
 }
 
@@ -436,6 +453,7 @@ if (elOsList) {
         updateFilterUI();
         fetchStats();
         fetchHeatmap();
+        fetchGlobe();
     });
 }
 
@@ -445,6 +463,7 @@ if (elBrowserClear) {
         updateFilterUI();
         fetchStats();
         fetchHeatmap();
+        fetchGlobe();
     });
 }
 
@@ -454,6 +473,7 @@ if (elDeviceClear) {
         updateFilterUI();
         fetchStats();
         fetchHeatmap();
+        fetchGlobe();
     });
 }
 
@@ -463,6 +483,7 @@ if (elOsClear) {
         updateFilterUI();
         fetchStats();
         fetchHeatmap();
+        fetchGlobe();
     });
 }
 
@@ -474,6 +495,7 @@ if (elFilterClear) {
         updateFilterUI();
         fetchStats();
         fetchHeatmap();
+        fetchGlobe();
     });
 }
 
@@ -485,6 +507,7 @@ if (elHeatmapCountryClear) {
         updateFilterUI();
         fetchStats();
         fetchHeatmap();
+        fetchGlobe();
     });
 }
 
@@ -495,6 +518,7 @@ if (elHeatmapCityClear) {
         updateFilterUI();
         fetchStats();
         fetchHeatmap();
+        fetchGlobe();
     });
 }
 
@@ -546,6 +570,7 @@ if (elHeatmapGrid) {
         }
         updateFilterUI();
         fetchStats();
+        fetchGlobe();
     });
 }
 
@@ -560,6 +585,7 @@ if (elDayLabels) {
         activeDow = (activeDow === d) ? null : d;
         updateFilterUI();
         fetchStats();
+        fetchGlobe();
     });
 }
 
@@ -571,6 +597,7 @@ if (elHeatmapHourLabels) {
         activeHour = (activeHour === h) ? null : h;
         updateFilterUI();
         fetchStats();
+        fetchGlobe();
     });
 }
 
@@ -579,6 +606,7 @@ if (elHeatmapDowClear) {
         activeDow = null;
         updateFilterUI();
         fetchStats();
+        fetchGlobe();
     });
 }
 
@@ -587,6 +615,7 @@ if (elHeatmapHourClear) {
         activeHour = null;
         updateFilterUI();
         fetchStats();
+        fetchGlobe();
     });
 }
 
@@ -648,8 +677,11 @@ function initSSE() {
                 if (payload.heatmap) renderHeatmap(payload.heatmap);
             }
             if (payload.globe) {
-                if (window._globeUpdateFn) window._globeUpdateFn(payload.globe);
-                else window._pendingGlobeData = payload.globe;
+                if (!activeCountry && !activeCity && activeDow === null && activeHour === null
+                        && !activeBrowser && !activeDeviceType && !activeOs) {
+                    if (window._globeUpdateFn) window._globeUpdateFn(payload.globe);
+                    else window._pendingGlobeData = payload.globe;
+                }
             }
         } catch (err) {
             console.error('[sse] parse error:', err);

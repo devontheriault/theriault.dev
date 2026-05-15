@@ -159,7 +159,8 @@ static int sse_build_json(char *buf, size_t size) {
     int    gcounts[GLOBE_MAX_CITIES];
     double glats[GLOBE_MAX_CITIES];
     double glngs[GLOBE_MAX_CITIES];
-    int    n = db_get_city_globe_data(cities, gctries, gcounts, glats, glngs, GLOBE_MAX_CITIES);
+    int    n = db_get_city_globe_data(cities, gctries, gcounts, glats, glngs, GLOBE_MAX_CITIES,
+        NULL, NULL, -1, -1, NULL, NULL, NULL);
 
     pos += snprintf(buf + pos, size - (size_t)pos, ",\"globe\":{\"cities\":[");
     for (int i = 0; i < n && pos < (int)size - 128; i++) {

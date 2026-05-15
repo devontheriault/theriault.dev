@@ -266,9 +266,10 @@
       });
   }
 
-  function fetchGlobe(attempt) {
+  function fetchGlobe(qs, attempt) {
+    qs      = qs      || '';
     attempt = attempt || 1;
-    fetch("/globe")
+    fetch("/globe" + qs)
       .then(function (r) {
         if (!r.ok) throw new Error("HTTP " + r.status);
         return r.json();
@@ -278,7 +279,7 @@
           updateGlobe(data);
         } else if (attempt < 5) {
           setTimeout(function () {
-            fetchGlobe(attempt + 1);
+            fetchGlobe(qs, attempt + 1);
           }, 2000 * attempt);
         }
       })
@@ -286,11 +287,15 @@
         console.error("[globe] fetch failed:", e);
         if (attempt < 5) {
           setTimeout(function () {
-            fetchGlobe(attempt + 1);
+            fetchGlobe(qs, attempt + 1);
           }, 2000 * attempt);
         }
       });
   }
+
+  window._fetchGlobeFn = function (qs) {
+    if (_globeReady) fetchGlobe(qs, 1);
+  };
 
   // Safety net: dismiss loader after 10s regardless, so the globe is never permanently hidden
   setTimeout(dismissLoader, 10000);
