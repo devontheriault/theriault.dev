@@ -28,11 +28,19 @@ StatsResult analytics_get_stats(const char *country_filter, const char *city_fil
     result.os_len           = db_get_top_os(result.top_os, result.os_counts, 10,
                                             country_filter, city_filter, dow, hour,
                                             browser_filter, device_type_filter);
-    result.referrer_len     = db_get_top_referrers(result.top_referrers, result.referrer_counts, 10);
-    result.avg_time_on_page = db_get_avg_time_on_page();
-    result.entry_page_len    = db_get_top_entry_pages(result.top_entry_pages,  result.entry_page_counts,    10);
-    result.exit_page_len     = db_get_top_exit_pages(result.top_exit_pages,    result.exit_page_counts,     10);
-    result.views_per_page_len = db_get_views_per_page(result.views_per_page,   result.views_per_page_counts, 10);
+    result.referrer_len      = db_get_top_referrers(result.top_referrers, result.referrer_counts, 10,
+                                                    country_filter, city_filter, dow, hour,
+                                                    browser_filter, device_type_filter, os_filter);
+    result.avg_time_on_page  = db_get_avg_time_on_page();
+    result.entry_page_len    = db_get_top_entry_pages(result.top_entry_pages,  result.entry_page_counts,  10,
+                                                      country_filter, city_filter, dow, hour,
+                                                      browser_filter, device_type_filter, os_filter);
+    result.exit_page_len     = db_get_top_exit_pages(result.top_exit_pages,   result.exit_page_counts,   10,
+                                                     country_filter, city_filter, dow, hour,
+                                                     browser_filter, device_type_filter, os_filter);
+    result.views_per_page_len = db_get_views_per_page(result.views_per_page,  result.views_per_page_counts, 10,
+                                                      country_filter, city_filter, dow, hour,
+                                                      browser_filter, device_type_filter, os_filter);
 
     if (country_filter && country_filter[0] != '\0') {
         strncpy(result.active_country, country_filter, 63);

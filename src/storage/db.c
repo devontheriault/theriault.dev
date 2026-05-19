@@ -138,18 +138,28 @@ int db_insert_visit(const char *ip, const char *country, const char *city, const
     return 0;
 }
 
-int db_get_top_referrers(char names[][128], int counts[], int max_n) {
+static int sql_append_filters(char *buf, size_t sz, int pos, const char *country, const char *city, int dow, int hour, const char *browser, const char *device_type, const char *os, int unknown_guard);
+static int sql_bind_filters(sqlite3_stmt *stmt, int b, const char *country, const char *city, int dow, int hour, const char *browser, const char *device_type, const char *os);
+
+int db_get_top_referrers(char names[][128], int counts[], int max_n,
+    const char *country, const char *city, int dow, int hour,
+    const char *browser, const char *device_type, const char *os)
+{
     if (!g_db || max_n <= 0) return 0;
 
-    const char *sql =
+    char sql[900];
+    int pos = snprintf(sql, sizeof(sql),
         "SELECT COALESCE(referrer,'Direct') AS ref, COUNT(*) AS cnt"
-        " FROM visits"
-        " WHERE is_bot = 0"
-        " GROUP BY ref ORDER BY cnt DESC LIMIT ?;";
+        " FROM visits WHERE 1=1");
+    pos = sql_append_filters(sql, sizeof(sql), pos, country, city, dow, hour,
+        browser, device_type, os, 1);
+    snprintf(sql + pos, sizeof(sql) - (size_t)pos,
+        " GROUP BY ref ORDER BY cnt DESC LIMIT ?");
 
     sqlite3_stmt *stmt = NULL;
     if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK) return 0;
-    sqlite3_bind_int(stmt, 1, max_n);
+    int b = sql_bind_filters(stmt, 1, country, city, dow, hour, browser, device_type, os);
+    sqlite3_bind_int(stmt, b, max_n);
 
     int n = 0;
     while (sqlite3_step(stmt) == SQLITE_ROW && n < max_n) {
@@ -563,18 +573,25 @@ int db_get_top_cities(char names[][64], int counts[], int max_n,
     return n;
 }
 
-int db_get_top_entry_pages(char names[][128], int counts[], int max_n) {
+int db_get_top_entry_pages(char names[][128], int counts[], int max_n,
+    const char *country, const char *city, int dow, int hour,
+    const char *browser, const char *device_type, const char *os)
+{
     if (!g_db || max_n <= 0) return 0;
 
-    const char *sql =
+    char sql[900];
+    int pos = snprintf(sql, sizeof(sql),
         "SELECT COALESCE(entry_page, '/') AS page, COUNT(*) AS cnt"
-        " FROM visits"
-        " WHERE is_bot = 0"
-        " GROUP BY page ORDER BY cnt DESC LIMIT ?;";
+        " FROM visits WHERE 1=1");
+    pos = sql_append_filters(sql, sizeof(sql), pos, country, city, dow, hour,
+        browser, device_type, os, 1);
+    snprintf(sql + pos, sizeof(sql) - (size_t)pos,
+        " GROUP BY page ORDER BY cnt DESC LIMIT ?");
 
     sqlite3_stmt *stmt = NULL;
     if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK) return 0;
-    sqlite3_bind_int(stmt, 1, max_n);
+    int b = sql_bind_filters(stmt, 1, country, city, dow, hour, browser, device_type, os);
+    sqlite3_bind_int(stmt, b, max_n);
 
     int n = 0;
     while (sqlite3_step(stmt) == SQLITE_ROW && n < max_n) {
@@ -588,18 +605,25 @@ int db_get_top_entry_pages(char names[][128], int counts[], int max_n) {
     return n;
 }
 
-int db_get_views_per_page(char names[][128], int counts[], int max_n) {
+int db_get_views_per_page(char names[][128], int counts[], int max_n,
+    const char *country, const char *city, int dow, int hour,
+    const char *browser, const char *device_type, const char *os)
+{
     if (!g_db || max_n <= 0) return 0;
 
-    const char *sql =
+    char sql[900];
+    int pos = snprintf(sql, sizeof(sql),
         "SELECT COALESCE(entry_page, '/') AS page, COUNT(*) AS cnt"
-        " FROM visits"
-        " WHERE is_bot = 0"
-        " GROUP BY page ORDER BY cnt DESC LIMIT ?;";
+        " FROM visits WHERE 1=1");
+    pos = sql_append_filters(sql, sizeof(sql), pos, country, city, dow, hour,
+        browser, device_type, os, 1);
+    snprintf(sql + pos, sizeof(sql) - (size_t)pos,
+        " GROUP BY page ORDER BY cnt DESC LIMIT ?");
 
     sqlite3_stmt *stmt = NULL;
     if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK) return 0;
-    sqlite3_bind_int(stmt, 1, max_n);
+    int b = sql_bind_filters(stmt, 1, country, city, dow, hour, browser, device_type, os);
+    sqlite3_bind_int(stmt, b, max_n);
 
     int n = 0;
     while (sqlite3_step(stmt) == SQLITE_ROW && n < max_n) {
@@ -613,18 +637,25 @@ int db_get_views_per_page(char names[][128], int counts[], int max_n) {
     return n;
 }
 
-int db_get_top_exit_pages(char names[][128], int counts[], int max_n) {
+int db_get_top_exit_pages(char names[][128], int counts[], int max_n,
+    const char *country, const char *city, int dow, int hour,
+    const char *browser, const char *device_type, const char *os)
+{
     if (!g_db || max_n <= 0) return 0;
 
-    const char *sql =
+    char sql[900];
+    int pos = snprintf(sql, sizeof(sql),
         "SELECT exit_page AS page, COUNT(*) AS cnt"
-        " FROM visits"
-        " WHERE is_bot = 0 AND exit_page IS NOT NULL"
-        " GROUP BY page ORDER BY cnt DESC LIMIT ?;";
+        " FROM visits WHERE exit_page IS NOT NULL");
+    pos = sql_append_filters(sql, sizeof(sql), pos, country, city, dow, hour,
+        browser, device_type, os, 1);
+    snprintf(sql + pos, sizeof(sql) - (size_t)pos,
+        " GROUP BY page ORDER BY cnt DESC LIMIT ?");
 
     sqlite3_stmt *stmt = NULL;
     if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK) return 0;
-    sqlite3_bind_int(stmt, 1, max_n);
+    int b = sql_bind_filters(stmt, 1, country, city, dow, hour, browser, device_type, os);
+    sqlite3_bind_int(stmt, b, max_n);
 
     int n = 0;
     while (sqlite3_step(stmt) == SQLITE_ROW && n < max_n) {
