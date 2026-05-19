@@ -43,6 +43,44 @@ int db_init(void) {
     sqlite3_exec(g_db, "ALTER TABLE visits ADD COLUMN referrer TEXT",        NULL, NULL, NULL);
     sqlite3_exec(g_db, "ALTER TABLE visits ADD COLUMN entry_page TEXT",      NULL, NULL, NULL);
     sqlite3_exec(g_db, "ALTER TABLE visits ADD COLUMN exit_page TEXT",       NULL, NULL, NULL);
+    sqlite3_exec(g_db, "ALTER TABLE visits ADD COLUMN is_bot INTEGER DEFAULT 0", NULL, NULL, NULL);
+
+    /* Backfill historical bot rows */
+    sqlite3_exec(g_db,
+        "UPDATE visits SET is_bot = 1 WHERE is_bot = 0 AND ("
+        " LENGTH(COALESCE(user_agent,'')) < 10"
+        " OR LOWER(user_agent) LIKE '%bot%'"
+        " OR LOWER(user_agent) LIKE '%spider%'"
+        " OR LOWER(user_agent) LIKE '%crawler%'"
+        " OR LOWER(user_agent) LIKE '%scraper%'"
+        " OR LOWER(user_agent) LIKE '%curl/%'"
+        " OR LOWER(user_agent) LIKE '%wget/%'"
+        " OR LOWER(user_agent) LIKE '%python-requests%'"
+        " OR LOWER(user_agent) LIKE '%python/%'"
+        " OR LOWER(user_agent) LIKE '%go-http-client%'"
+        " OR LOWER(user_agent) LIKE '%java/%'"
+        " OR LOWER(user_agent) LIKE '%jakarta%'"
+        " OR LOWER(user_agent) LIKE '%libwww-perl%'"
+        " OR LOWER(user_agent) LIKE '%perl/%'"
+        " OR LOWER(user_agent) LIKE '%ruby/%'"
+        " OR LOWER(user_agent) LIKE '%php/%'"
+        " OR LOWER(user_agent) LIKE '%okhttp/%'"
+        " OR LOWER(user_agent) LIKE '%apache-httpclient%'"
+        " OR LOWER(user_agent) LIKE '%node-fetch%'"
+        " OR LOWER(user_agent) LIKE '%node.js%'"
+        " OR LOWER(user_agent) LIKE '%axios/%'"
+        " OR LOWER(user_agent) LIKE '%got/%'"
+        " OR LOWER(user_agent) LIKE '%httpx/%'"
+        " OR LOWER(user_agent) LIKE '%scrapy/%'"
+        " OR LOWER(user_agent) LIKE '%aiohttp/%'"
+        " OR LOWER(user_agent) LIKE '%masscan%'"
+        " OR LOWER(user_agent) LIKE '%zgrab%'"
+        " OR LOWER(user_agent) LIKE '%nuclei%'"
+        " OR LOWER(user_agent) LIKE '%nmap%'"
+        " OR LOWER(user_agent) LIKE '%sqlmap%'"
+        " OR LOWER(user_agent) LIKE '%nikto%'"
+        ");",
+        NULL, NULL, NULL);
     sqlite3_exec(g_db, "ALTER TABLE ip_ranges ADD COLUMN latitude REAL DEFAULT 0", NULL, NULL, NULL);
     sqlite3_exec(g_db, "ALTER TABLE ip_ranges ADD COLUMN longitude REAL DEFAULT 0", NULL, NULL, NULL);
     /* Index so city-name coord fallback queries are fast */
@@ -106,7 +144,7 @@ int db_get_top_referrers(char names[][128], int counts[], int max_n) {
     const char *sql =
         "SELECT COALESCE(referrer,'Direct') AS ref, COUNT(*) AS cnt"
         " FROM visits"
-        " WHERE 1=1"
+        " WHERE is_bot = 0"
         " GROUP BY ref ORDER BY cnt DESC LIMIT ?;";
 
     sqlite3_stmt *stmt = NULL;
@@ -157,7 +195,7 @@ double db_get_avg_time_on_page(void) {
 
     const char *sql =
         "SELECT AVG(time_on_page) FROM visits"
-        " WHERE time_on_page IS NOT NULL;";
+        " WHERE time_on_page IS NOT NULL AND is_bot = 0;";
 
     sqlite3_stmt *stmt = NULL;
     if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK)
@@ -178,6 +216,7 @@ static int sql_append_filters(char *buf, size_t sz, int pos,
     const char *browser, const char *device_type, const char *os,
     int unknown_guard)
 {
+    pos += snprintf(buf + pos, sz - (size_t)pos, " AND is_bot = 0");
     if (unknown_guard && !(country && country[0]) && !(city && city[0]))
         pos += snprintf(buf + pos, sz - (size_t)pos,
             " AND country NOT IN ('Unknown','Localhost','Local','','-')");
@@ -342,7 +381,7 @@ int db_get_all_countries(char names[][64], int counts[], int max_n) {
     const char *sql =
         "SELECT country, COUNT(*) as cnt "
         "FROM visits "
-        "WHERE country NOT IN ('Unknown', 'Localhost', 'Local', '', '-') "
+        "WHERE is_bot = 0 AND country NOT IN ('Unknown', 'Localhost', 'Local', '', '-') "
         "GROUP BY country "
         "ORDER BY cnt DESC "
         "LIMIT ?;";
@@ -530,6 +569,7 @@ int db_get_top_entry_pages(char names[][128], int counts[], int max_n) {
     const char *sql =
         "SELECT COALESCE(entry_page, '/') AS page, COUNT(*) AS cnt"
         " FROM visits"
+        " WHERE is_bot = 0"
         " GROUP BY page ORDER BY cnt DESC LIMIT ?;";
 
     sqlite3_stmt *stmt = NULL;
@@ -554,6 +594,7 @@ int db_get_views_per_page(char names[][128], int counts[], int max_n) {
     const char *sql =
         "SELECT COALESCE(entry_page, '/') AS page, COUNT(*) AS cnt"
         " FROM visits"
+        " WHERE is_bot = 0"
         " GROUP BY page ORDER BY cnt DESC LIMIT ?;";
 
     sqlite3_stmt *stmt = NULL;
@@ -578,7 +619,7 @@ int db_get_top_exit_pages(char names[][128], int counts[], int max_n) {
     const char *sql =
         "SELECT exit_page AS page, COUNT(*) AS cnt"
         " FROM visits"
-        " WHERE exit_page IS NOT NULL"
+        " WHERE is_bot = 0 AND exit_page IS NOT NULL"
         " GROUP BY page ORDER BY cnt DESC LIMIT ?;";
 
     sqlite3_stmt *stmt = NULL;
