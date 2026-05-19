@@ -21,6 +21,9 @@ typedef struct {
     char top_os[10][32];
     int  os_counts[10];
     int  os_len;
+    char top_referrers[10][128];
+    int  referrer_counts[10];
+    int  referrer_len;
     double avg_time_on_page;
 } StatsResult;
 

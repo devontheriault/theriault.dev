@@ -81,9 +81,10 @@ void server_run(int port) {
         }
         url_decode(req.path);
 
-        /* Extract real client IP and User-Agent */
+        /* Extract real client IP, User-Agent, and Referer */
         net_extract_ip(buf, peer_ip, req.client_ip);
         net_extract_user_agent(buf, req.user_agent);
+        net_extract_referrer(buf, req.referrer);
 
         int keep = router_dispatch(client_fd, &req);
         if (!keep) close(client_fd);

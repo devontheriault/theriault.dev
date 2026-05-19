@@ -118,6 +118,15 @@ void handle_stats(int client_fd, const HttpRequest *req) {
             (i > 0) ? "," : "", escaped, stats.os_counts[i]);
     }
 
+    pos += snprintf(body + pos, sizeof(body) - (size_t)pos, "],\"referrers\":[");
+    for (int i = 0; i < stats.referrer_len && pos < (int)sizeof(body) - 64; i++) {
+        char escaped[256];
+        json_string_escape(stats.top_referrers[i], escaped, sizeof(escaped));
+        pos += snprintf(body + pos, sizeof(body) - (size_t)pos,
+            "%s{\"referrer\":\"%s\",\"count\":%d}",
+            (i > 0) ? "," : "", escaped, stats.referrer_counts[i]);
+    }
+
     char escaped_country[128];
     json_string_escape(stats.active_country, escaped_country, sizeof(escaped_country));
     pos += snprintf(body + pos, sizeof(body) - (size_t)pos,

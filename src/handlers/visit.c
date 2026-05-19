@@ -33,7 +33,7 @@ void handle_visit(int client_fd, const HttpRequest *req) {
     geo_lookup(req->client_ip, country, city, &lat, &lng);
 
     /* Record the visit */
-    logger_record(req->client_ip, country, city, req->user_agent, lat, lng);
+    logger_record(req->client_ip, country, city, req->user_agent, lat, lng, req->referrer);
 
     /* Read index.html from disk */
     FILE *f = fopen(HTML_PATH, "rb");

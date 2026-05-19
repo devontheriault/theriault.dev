@@ -11,6 +11,7 @@ const elCityList        = document.getElementById('city-list');
 const elBrowserList     = document.getElementById('browser-list');
 const elDeviceList      = document.getElementById('device-list');
 const elOsList          = document.getElementById('os-list');
+const elReferrerList    = document.getElementById('referrer-list');
 
 export function renderBarList(container, items, nameKey, activeValue, iconFn) {
     if (items.length === 0) {
@@ -57,9 +58,10 @@ export function renderStats(data) {
     if (elCountryList) renderBarList(elCountryList, data.top_countries || [], 'country',     state.country,     null);
     if (elCitySection) elCitySection.style.display = (data.top_cities || []).length > 0 ? '' : 'none';
     if (elCityList)    renderBarList(elCityList,    data.top_cities   || [], 'city',         state.city,        null);
-    if (elBrowserList) renderBarList(elBrowserList, data.browsers     || [], 'browser',      state.browser,     browserIcon);
-    if (elDeviceList)  renderBarList(elDeviceList,  data.device_types || [], 'device_type',  state.deviceType,  deviceIcon);
-    if (elOsList)      renderBarList(elOsList,       data.os          || [], 'os',           state.os,          osIcon);
+    if (elBrowserList)  renderBarList(elBrowserList,  data.browsers     || [], 'browser',      state.browser,    browserIcon);
+    if (elDeviceList)   renderBarList(elDeviceList,   data.device_types || [], 'device_type',  state.deviceType, deviceIcon);
+    if (elOsList)       renderBarList(elOsList,        data.os          || [], 'os',           state.os,         osIcon);
+    if (elReferrerList) renderBarList(elReferrerList,  data.referrers   || [], 'referrer',     null,             null);
 
     setOk();
 }

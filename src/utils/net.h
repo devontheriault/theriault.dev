@@ -13,4 +13,9 @@ void net_extract_ip(const char *raw_request, const char *peer_addr, char *ip_out
    ua_out must be at least 256 bytes. */
 void net_extract_user_agent(const char *raw_request, char *ua_out);
 
+/* Extract and normalize the Referer header to a bare domain (e.g. "google.com").
+   Returns "Direct" when the header is absent or empty.
+   out must be at least 128 bytes. */
+void net_extract_referrer(const char *raw_request, char *out);
+
 #endif /* NET_H */

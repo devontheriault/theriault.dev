@@ -40,6 +40,7 @@ int db_init(void) {
     sqlite3_exec(g_db, "ALTER TABLE visits ADD COLUMN device_type TEXT",  NULL, NULL, NULL);
     sqlite3_exec(g_db, "ALTER TABLE visits ADD COLUMN os TEXT",           NULL, NULL, NULL);
     sqlite3_exec(g_db, "ALTER TABLE visits ADD COLUMN time_on_page INTEGER", NULL, NULL, NULL);
+    sqlite3_exec(g_db, "ALTER TABLE visits ADD COLUMN referrer TEXT",        NULL, NULL, NULL);
     sqlite3_exec(g_db, "ALTER TABLE ip_ranges ADD COLUMN latitude REAL DEFAULT 0", NULL, NULL, NULL);
     sqlite3_exec(g_db, "ALTER TABLE ip_ranges ADD COLUMN longitude REAL DEFAULT 0", NULL, NULL, NULL);
     /* Index so city-name coord fallback queries are fast */
@@ -58,15 +59,15 @@ void db_close(void) {
     }
 }
 
-int db_insert_visit(const char *ip, const char *country, const char *city, const char *user_agent, double lat, double lng) {
+int db_insert_visit(const char *ip, const char *country, const char *city, const char *user_agent, double lat, double lng, const char *referrer) {
     if (!g_db) return -1;
 
     char browser[32], device_type[32], os[32];
     ua_parse(user_agent, browser, device_type, os);
 
     const char *sql =
-        "INSERT INTO visits (ip, country, city, user_agent, lat, lng, browser, device_type, os)"
-        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);";
+        "INSERT INTO visits (ip, country, city, user_agent, lat, lng, browser, device_type, os, referrer)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
     sqlite3_stmt *stmt = NULL;
 
     int rc = sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL);
@@ -84,6 +85,7 @@ int db_insert_visit(const char *ip, const char *country, const char *city, const
     sqlite3_bind_text(stmt,   7, browser,     -1, SQLITE_TRANSIENT);
     sqlite3_bind_text(stmt,   8, device_type, -1, SQLITE_TRANSIENT);
     sqlite3_bind_text(stmt,   9, os,          -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt,  10, referrer && referrer[0] ? referrer : "Direct", -1, SQLITE_STATIC);
 
     rc = sqlite3_step(stmt);
     sqlite3_finalize(stmt);
@@ -93,6 +95,31 @@ int db_insert_visit(const char *ip, const char *country, const char *city, const
         return -1;
     }
     return 0;
+}
+
+int db_get_top_referrers(char names[][128], int counts[], int max_n) {
+    if (!g_db || max_n <= 0) return 0;
+
+    const char *sql =
+        "SELECT COALESCE(referrer,'Direct') AS ref, COUNT(*) AS cnt"
+        " FROM visits"
+        " WHERE 1=1"
+        " GROUP BY ref ORDER BY cnt DESC LIMIT ?;";
+
+    sqlite3_stmt *stmt = NULL;
+    if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK) return 0;
+    sqlite3_bind_int(stmt, 1, max_n);
+
+    int n = 0;
+    while (sqlite3_step(stmt) == SQLITE_ROW && n < max_n) {
+        const char *name = (const char *)sqlite3_column_text(stmt, 0);
+        strncpy(names[n], name ? name : "Direct", 127);
+        names[n][127] = '\0';
+        counts[n] = sqlite3_column_int(stmt, 1);
+        n++;
+    }
+    sqlite3_finalize(stmt);
+    return n;
 }
 
 int db_update_visit_duration(const char *ip, const char *user_agent, int seconds) {

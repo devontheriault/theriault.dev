@@ -109,3 +109,57 @@ void net_extract_user_agent(const char *raw_request, char *ua_out) {
         if (*p == '\n') p++;
     }
 }
+
+void net_extract_referrer(const char *raw_request, char *out) {
+    char raw[256] = {0};
+
+    if (raw_request) {
+        const char *needle = "referer:";
+        const char *p = raw_request;
+        while (*p) {
+            size_t nl = strlen(needle);
+            int match = 1;
+            for (size_t i = 0; i < nl && p[i]; i++) {
+                if (tolower((unsigned char)p[i]) != needle[i]) { match = 0; break; }
+            }
+            if (match) {
+                p += nl;
+                while (*p == ' ' || *p == '\t') p++;
+                size_t i = 0;
+                while (*p && *p != '\r' && *p != '\n' && i < sizeof(raw) - 1)
+                    raw[i++] = *p++;
+                raw[i] = '\0';
+                break;
+            }
+            while (*p && *p != '\n') p++;
+            if (*p == '\n') p++;
+        }
+    }
+
+    if (raw[0] == '\0') {
+        strncpy(out, "Direct", 127);
+        out[127] = '\0';
+        return;
+    }
+
+    /* Strip protocol */
+    const char *host = raw;
+    if (strncmp(host, "https://", 8) == 0) host += 8;
+    else if (strncmp(host, "http://", 7) == 0) host += 7;
+
+    /* Strip leading www. */
+    if (strncmp(host, "www.", 4) == 0) host += 4;
+
+    /* Take up to first '/', '?', or end */
+    size_t i = 0;
+    while (host[i] && host[i] != '/' && host[i] != '?' && i < 127)
+        i++;
+
+    strncpy(out, host, i);
+    out[i] = '\0';
+
+    if (out[0] == '\0') {
+        strncpy(out, "Direct", 127);
+        out[127] = '\0';
+    }
+}

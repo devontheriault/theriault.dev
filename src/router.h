@@ -6,6 +6,7 @@ typedef struct {
     char path[256];
     char client_ip[64];
     char user_agent[256];
+    char referrer[128];
     char raw[4096];   /* full raw request for header extraction */
 } HttpRequest;
 
