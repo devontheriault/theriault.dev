@@ -142,6 +142,33 @@ static int sse_build_json(char *buf, size_t size) {
             i > 0 ? "," : "", esc, stats.referrer_counts[i]);
     }
 
+    pos += snprintf(buf + pos, size - (size_t)pos, "],\"views_per_page\":[");
+    for (int i = 0; i < stats.views_per_page_len && pos < (int)size - 64; i++) {
+        char esc[256];
+        json_string_escape(stats.views_per_page[i], esc, sizeof(esc));
+        pos += snprintf(buf + pos, size - (size_t)pos,
+            "%s{\"page\":\"%s\",\"count\":%d}",
+            i > 0 ? "," : "", esc, stats.views_per_page_counts[i]);
+    }
+
+    pos += snprintf(buf + pos, size - (size_t)pos, "],\"entry_pages\":[");
+    for (int i = 0; i < stats.entry_page_len && pos < (int)size - 64; i++) {
+        char esc[256];
+        json_string_escape(stats.top_entry_pages[i], esc, sizeof(esc));
+        pos += snprintf(buf + pos, size - (size_t)pos,
+            "%s{\"entry_page\":\"%s\",\"count\":%d}",
+            i > 0 ? "," : "", esc, stats.entry_page_counts[i]);
+    }
+
+    pos += snprintf(buf + pos, size - (size_t)pos, "],\"exit_pages\":[");
+    for (int i = 0; i < stats.exit_page_len && pos < (int)size - 64; i++) {
+        char esc[256];
+        json_string_escape(stats.top_exit_pages[i], esc, sizeof(esc));
+        pos += snprintf(buf + pos, size - (size_t)pos,
+            "%s{\"exit_page\":\"%s\",\"count\":%d}",
+            i > 0 ? "," : "", esc, stats.exit_page_counts[i]);
+    }
+
     pos += snprintf(buf + pos, size - (size_t)pos,
         "],\"active_country\":\"\",\"avg_time_on_page\":%.1f}",
         stats.avg_time_on_page);
