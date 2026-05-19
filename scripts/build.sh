@@ -30,6 +30,7 @@ SRCS=(
     src/utils/json.c
     src/utils/net.c
     src/utils/ua_parser.c
+    src/utils/bot_filter.c
 )
 
 echo "==> Building visitor-tracker server..."

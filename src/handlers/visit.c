@@ -1,6 +1,7 @@
 #include "visit.h"
 #include "../services/geo.h"
 #include "../services/logger.h"
+#include "../utils/bot_filter.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -37,7 +38,14 @@ void handle_visit(int client_fd, const HttpRequest *req) {
     strncpy(entry_page, req->path, sizeof(entry_page) - 1);
     char *qs = strchr(entry_page, '?');
     if (qs) *qs = '\0';
-    logger_record(req->client_ip, country, city, req->user_agent, lat, lng, req->referrer, entry_page);
+
+    if (is_bot_request(req->user_agent, entry_page)) {
+        fprintf(stdout, "[visit] bot/scanner suppressed  ip=%-16s  ua=%s  path=%s\n",
+                req->client_ip, req->user_agent, entry_page);
+        fflush(stdout);
+    } else {
+        logger_record(req->client_ip, country, city, req->user_agent, lat, lng, req->referrer, entry_page);
+    }
 
     /* Read index.html from disk */
     FILE *f = fopen(HTML_PATH, "rb");
