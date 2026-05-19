@@ -22,7 +22,7 @@ SRCS=(
     src/handlers/me.c
     src/handlers/globe.c
     src/handlers/heatmap.c
-    src/handlers/duration.c
+    src/handlers/event.c
     src/services/logger.c
     src/services/geo.c
     src/services/analytics.c
@@ -31,6 +31,8 @@ SRCS=(
     src/utils/net.c
     src/utils/ua_parser.c
     src/utils/bot_filter.c
+    src/utils/secret.c
+    src/utils/hash.c
 )
 
 echo "==> Building visitor-tracker server..."

@@ -44,6 +44,10 @@ int db_init(void) {
     sqlite3_exec(g_db, "ALTER TABLE visits ADD COLUMN entry_page TEXT",      NULL, NULL, NULL);
     sqlite3_exec(g_db, "ALTER TABLE visits ADD COLUMN exit_page TEXT",       NULL, NULL, NULL);
     sqlite3_exec(g_db, "ALTER TABLE visits ADD COLUMN is_bot INTEGER DEFAULT 0", NULL, NULL, NULL);
+    sqlite3_exec(g_db, "ALTER TABLE visits ADD COLUMN visitor_id TEXT",      NULL, NULL, NULL);
+    /* Backfill legacy rows so visitor_id is never NULL */
+    sqlite3_exec(g_db, "UPDATE visits SET visitor_id = 'legacy' WHERE visitor_id IS NULL",
+                 NULL, NULL, NULL);
 
     /* Backfill historical bot rows */
     sqlite3_exec(g_db,
@@ -99,14 +103,14 @@ void db_close(void) {
     }
 }
 
-int db_insert_visit(const char *ip, const char *country, const char *city, const char *user_agent, double lat, double lng, const char *referrer, const char *entry_page) {
+long long db_insert_visit(const char *visitor_id, const char *country, const char *city, const char *user_agent, double lat, double lng, const char *referrer, const char *entry_page) {
     if (!g_db) return -1;
 
     char browser[32], device_type[32], os[32];
     ua_parse(user_agent, browser, device_type, os);
 
     const char *sql =
-        "INSERT INTO visits (ip, country, city, user_agent, lat, lng, browser, device_type, os, referrer, entry_page)"
+        "INSERT INTO visits (visitor_id, country, city, user_agent, lat, lng, browser, device_type, os, referrer, entry_page)"
         " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
     sqlite3_stmt *stmt = NULL;
 
@@ -116,7 +120,7 @@ int db_insert_visit(const char *ip, const char *country, const char *city, const
         return -1;
     }
 
-    sqlite3_bind_text(stmt,   1, ip,          -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt,   1, visitor_id && visitor_id[0] ? visitor_id : "unknown", -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt,   2, country,     -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt,   3, city,        -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt,   4, user_agent,  -1, SQLITE_STATIC);
@@ -135,7 +139,7 @@ int db_insert_visit(const char *ip, const char *country, const char *city, const
         fprintf(stderr, "[db] Insert error: %s\n", sqlite3_errmsg(g_db));
         return -1;
     }
-    return 0;
+    return (long long)sqlite3_last_insert_rowid(g_db);
 }
 
 static int sql_append_filters(char *buf, size_t sz, int pos, const char *country, const char *city, int dow, int hour, const char *browser, const char *device_type, const char *os, int unknown_guard);
@@ -173,16 +177,12 @@ int db_get_top_referrers(char names[][128], int counts[], int max_n,
     return n;
 }
 
-int db_update_visit_duration(const char *ip, const char *user_agent, int seconds, const char *exit_page) {
+int db_update_visit_duration_by_id(long long visit_id, int seconds, const char *exit_page) {
     if (!g_db) return -1;
 
     const char *sql =
         "UPDATE visits SET time_on_page = ?, exit_page = ?"
-        " WHERE id = ("
-        "   SELECT id FROM visits"
-        "   WHERE ip = ? AND user_agent = ?"
-        "   ORDER BY timestamp DESC LIMIT 1"
-        " ) AND time_on_page IS NULL;";
+        " WHERE id = ? AND time_on_page IS NULL;";
 
     sqlite3_stmt *stmt = NULL;
     if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK) {
@@ -192,8 +192,7 @@ int db_update_visit_duration(const char *ip, const char *user_agent, int seconds
 
     sqlite3_bind_int (stmt, 1, seconds);
     sqlite3_bind_text(stmt, 2, exit_page && exit_page[0] ? exit_page : "/", -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 3, ip,         -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 4, user_agent, -1, SQLITE_STATIC);
+    sqlite3_bind_int64(stmt, 3, (sqlite3_int64)visit_id);
 
     int rc = sqlite3_step(stmt);
     sqlite3_finalize(stmt);
@@ -289,7 +288,7 @@ int db_get_unique_visitors(const char *country, const char *city, int dow, int h
     const char *browser, const char *device_type, const char *os) {
     if (!g_db) return 0;
     return scalar_query_filtered(
-        "COUNT(DISTINCT ip||'|'||user_agent||'|'||date(timestamp))",
+        "COUNT(DISTINCT COALESCE(NULLIF(visitor_id,'legacy'), ip||'|'||user_agent||'|'||date(timestamp)))",
         country, city, dow, hour, browser, device_type, os);
 }
 

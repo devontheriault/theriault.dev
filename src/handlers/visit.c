@@ -1,7 +1,4 @@
 #include "visit.h"
-#include "../services/geo.h"
-#include "../services/logger.h"
-#include "../utils/bot_filter.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -27,25 +24,7 @@ static void send_404(int client_fd) {
 }
 
 void handle_visit(int client_fd, const HttpRequest *req) {
-    /* Perform geo lookup */
-    char   country[64] = "Unknown";
-    char   city[64]    = "Unknown";
-    double lat = 0.0, lng = 0.0;
-    geo_lookup(req->client_ip, country, city, &lat, &lng);
-
-    /* Record the visit */
-    char entry_page[256] = {0};
-    strncpy(entry_page, req->path, sizeof(entry_page) - 1);
-    char *qs = strchr(entry_page, '?');
-    if (qs) *qs = '\0';
-
-    if (is_bot_request(req->user_agent, entry_page)) {
-        fprintf(stdout, "[visit] bot/scanner suppressed  ip=%-16s  ua=%s  path=%s\n",
-                req->client_ip, req->user_agent, entry_page);
-        fflush(stdout);
-    } else {
-        logger_record(req->client_ip, country, city, req->user_agent, lat, lng, req->referrer, entry_page);
-    }
+    (void)req;
 
     /* Read index.html from disk */
     FILE *f = fopen(HTML_PATH, "rb");

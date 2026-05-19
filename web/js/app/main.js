@@ -14,6 +14,30 @@ bindHeatmapEvents();
 bindTooltipEvents();
 initBackground();
 
+let _visitId = null;
+const _pageStart = Date.now();
+
+fetch('/event', {
+    method: 'POST',
+    body: new URLSearchParams({ type: 'pageview', path: window.location.pathname, referrer: document.referrer })
+})
+    .then(function(r) { return r.ok ? r.json() : null; })
+    .then(function(d) { if (d && d.visit_id) _visitId = d.visit_id; })
+    .catch(function() {});
+
+document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState !== 'hidden' || _visitId === null) return;
+    const seconds = Math.round((Date.now() - _pageStart) / 1000);
+    if (seconds > 0) {
+        navigator.sendBeacon('/event', new URLSearchParams({
+            type: 'duration',
+            visit_id: _visitId,
+            seconds: seconds,
+            exit_page: window.location.pathname
+        }));
+    }
+});
+
 (function fetchYourVisit() {
     fetch('/me')
         .then(function(res) { return res.json(); })
@@ -30,16 +54,6 @@ initBackground();
             if (el) el.innerHTML = '<i class="' + escapeHtml(osIcon(data.os)) + '" aria-hidden="true"></i> ' + escapeHtml(data.os || '—');
         })
         .catch(function(err) { console.error('[app] /me fetch failed:', err); });
-}());
-
-(function timeOnPageBeacon() {
-    const startTime = Date.now();
-    document.addEventListener('visibilitychange', function() {
-        if (document.visibilityState === 'hidden') {
-            const seconds = Math.round((Date.now() - startTime) / 1000);
-            if (seconds > 0) navigator.sendBeacon('/duration', 'seconds=' + seconds + '&exit_page=' + encodeURIComponent(window.location.pathname));
-        }
-    });
 }());
 
 fetchStats()
