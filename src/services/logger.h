@@ -2,6 +2,6 @@
 #define LOGGER_H
 
 /* Record a visit to the database. */
-int logger_record(const char *ip, const char *country, const char *city, const char *user_agent, double lat, double lng, const char *referrer);
+int logger_record(const char *ip, const char *country, const char *city, const char *user_agent, double lat, double lng, const char *referrer, const char *entry_page);
 
 #endif /* LOGGER_H */

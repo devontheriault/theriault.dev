@@ -37,7 +37,7 @@ initBackground();
     document.addEventListener('visibilitychange', function() {
         if (document.visibilityState === 'hidden') {
             const seconds = Math.round((Date.now() - startTime) / 1000);
-            if (seconds > 0) navigator.sendBeacon('/duration', 'seconds=' + seconds);
+            if (seconds > 0) navigator.sendBeacon('/duration', 'seconds=' + seconds + '&exit_page=' + encodeURIComponent(window.location.pathname));
         }
     });
 }());

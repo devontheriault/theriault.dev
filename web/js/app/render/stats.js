@@ -12,6 +12,9 @@ const elBrowserList     = document.getElementById('browser-list');
 const elDeviceList      = document.getElementById('device-list');
 const elOsList          = document.getElementById('os-list');
 const elReferrerList    = document.getElementById('referrer-list');
+const elViewsPerPageList = document.getElementById('views-per-page-list');
+const elEntryPageList   = document.getElementById('entry-page-list');
+const elExitPageList    = document.getElementById('exit-page-list');
 
 export function renderBarList(container, items, nameKey, activeValue, iconFn) {
     if (items.length === 0) {
@@ -61,7 +64,10 @@ export function renderStats(data) {
     if (elBrowserList)  renderBarList(elBrowserList,  data.browsers     || [], 'browser',      state.browser,    browserIcon);
     if (elDeviceList)   renderBarList(elDeviceList,   data.device_types || [], 'device_type',  state.deviceType, deviceIcon);
     if (elOsList)       renderBarList(elOsList,        data.os          || [], 'os',           state.os,         osIcon);
-    if (elReferrerList) renderBarList(elReferrerList,  data.referrers   || [], 'referrer',     null,             null);
+    if (elReferrerList)   renderBarList(elReferrerList,   data.referrers   || [], 'referrer',    null, null);
+    if (elViewsPerPageList) renderBarList(elViewsPerPageList, data.views_per_page || [], 'page',       null, null);
+    if (elEntryPageList)    renderBarList(elEntryPageList,    data.entry_pages    || [], 'entry_page', null, null);
+    if (elExitPageList)     renderBarList(elExitPageList,     data.exit_pages     || [], 'exit_page',  null, null);
 
     setOk();
 }

@@ -127,6 +127,33 @@ void handle_stats(int client_fd, const HttpRequest *req) {
             (i > 0) ? "," : "", escaped, stats.referrer_counts[i]);
     }
 
+    pos += snprintf(body + pos, sizeof(body) - (size_t)pos, "],\"views_per_page\":[");
+    for (int i = 0; i < stats.views_per_page_len && pos < (int)sizeof(body) - 64; i++) {
+        char escaped[256];
+        json_string_escape(stats.views_per_page[i], escaped, sizeof(escaped));
+        pos += snprintf(body + pos, sizeof(body) - (size_t)pos,
+            "%s{\"page\":\"%s\",\"count\":%d}",
+            (i > 0) ? "," : "", escaped, stats.views_per_page_counts[i]);
+    }
+
+    pos += snprintf(body + pos, sizeof(body) - (size_t)pos, "],\"entry_pages\":[");
+    for (int i = 0; i < stats.entry_page_len && pos < (int)sizeof(body) - 64; i++) {
+        char escaped[256];
+        json_string_escape(stats.top_entry_pages[i], escaped, sizeof(escaped));
+        pos += snprintf(body + pos, sizeof(body) - (size_t)pos,
+            "%s{\"entry_page\":\"%s\",\"count\":%d}",
+            (i > 0) ? "," : "", escaped, stats.entry_page_counts[i]);
+    }
+
+    pos += snprintf(body + pos, sizeof(body) - (size_t)pos, "],\"exit_pages\":[");
+    for (int i = 0; i < stats.exit_page_len && pos < (int)sizeof(body) - 64; i++) {
+        char escaped[256];
+        json_string_escape(stats.top_exit_pages[i], escaped, sizeof(escaped));
+        pos += snprintf(body + pos, sizeof(body) - (size_t)pos,
+            "%s{\"exit_page\":\"%s\",\"count\":%d}",
+            (i > 0) ? "," : "", escaped, stats.exit_page_counts[i]);
+    }
+
     char escaped_country[128];
     json_string_escape(stats.active_country, escaped_country, sizeof(escaped_country));
     pos += snprintf(body + pos, sizeof(body) - (size_t)pos,

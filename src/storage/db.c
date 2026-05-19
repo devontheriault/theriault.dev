@@ -41,6 +41,8 @@ int db_init(void) {
     sqlite3_exec(g_db, "ALTER TABLE visits ADD COLUMN os TEXT",           NULL, NULL, NULL);
     sqlite3_exec(g_db, "ALTER TABLE visits ADD COLUMN time_on_page INTEGER", NULL, NULL, NULL);
     sqlite3_exec(g_db, "ALTER TABLE visits ADD COLUMN referrer TEXT",        NULL, NULL, NULL);
+    sqlite3_exec(g_db, "ALTER TABLE visits ADD COLUMN entry_page TEXT",      NULL, NULL, NULL);
+    sqlite3_exec(g_db, "ALTER TABLE visits ADD COLUMN exit_page TEXT",       NULL, NULL, NULL);
     sqlite3_exec(g_db, "ALTER TABLE ip_ranges ADD COLUMN latitude REAL DEFAULT 0", NULL, NULL, NULL);
     sqlite3_exec(g_db, "ALTER TABLE ip_ranges ADD COLUMN longitude REAL DEFAULT 0", NULL, NULL, NULL);
     /* Index so city-name coord fallback queries are fast */
@@ -59,15 +61,15 @@ void db_close(void) {
     }
 }
 
-int db_insert_visit(const char *ip, const char *country, const char *city, const char *user_agent, double lat, double lng, const char *referrer) {
+int db_insert_visit(const char *ip, const char *country, const char *city, const char *user_agent, double lat, double lng, const char *referrer, const char *entry_page) {
     if (!g_db) return -1;
 
     char browser[32], device_type[32], os[32];
     ua_parse(user_agent, browser, device_type, os);
 
     const char *sql =
-        "INSERT INTO visits (ip, country, city, user_agent, lat, lng, browser, device_type, os, referrer)"
-        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
+        "INSERT INTO visits (ip, country, city, user_agent, lat, lng, browser, device_type, os, referrer, entry_page)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
     sqlite3_stmt *stmt = NULL;
 
     int rc = sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL);
@@ -86,6 +88,7 @@ int db_insert_visit(const char *ip, const char *country, const char *city, const
     sqlite3_bind_text(stmt,   8, device_type, -1, SQLITE_TRANSIENT);
     sqlite3_bind_text(stmt,   9, os,          -1, SQLITE_TRANSIENT);
     sqlite3_bind_text(stmt,  10, referrer && referrer[0] ? referrer : "Direct", -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt,  11, entry_page && entry_page[0] ? entry_page : "/", -1, SQLITE_STATIC);
 
     rc = sqlite3_step(stmt);
     sqlite3_finalize(stmt);
@@ -122,11 +125,11 @@ int db_get_top_referrers(char names[][128], int counts[], int max_n) {
     return n;
 }
 
-int db_update_visit_duration(const char *ip, const char *user_agent, int seconds) {
+int db_update_visit_duration(const char *ip, const char *user_agent, int seconds, const char *exit_page) {
     if (!g_db) return -1;
 
     const char *sql =
-        "UPDATE visits SET time_on_page = ?"
+        "UPDATE visits SET time_on_page = ?, exit_page = ?"
         " WHERE id = ("
         "   SELECT id FROM visits"
         "   WHERE ip = ? AND user_agent = ?"
@@ -140,8 +143,9 @@ int db_update_visit_duration(const char *ip, const char *user_agent, int seconds
     }
 
     sqlite3_bind_int (stmt, 1, seconds);
-    sqlite3_bind_text(stmt, 2, ip,         -1, SQLITE_STATIC);
-    sqlite3_bind_text(stmt, 3, user_agent, -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 2, exit_page && exit_page[0] ? exit_page : "/", -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 3, ip,         -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 4, user_agent, -1, SQLITE_STATIC);
 
     int rc = sqlite3_step(stmt);
     sqlite3_finalize(stmt);
@@ -513,6 +517,79 @@ int db_get_top_cities(char names[][64], int counts[], int max_n,
         const char *name = (const char *)sqlite3_column_text(stmt, 0);
         strncpy(names[n], name ? name : "", 63);
         names[n][63] = '\0';
+        counts[n] = sqlite3_column_int(stmt, 1);
+        n++;
+    }
+    sqlite3_finalize(stmt);
+    return n;
+}
+
+int db_get_top_entry_pages(char names[][128], int counts[], int max_n) {
+    if (!g_db || max_n <= 0) return 0;
+
+    const char *sql =
+        "SELECT COALESCE(entry_page, '/') AS page, COUNT(*) AS cnt"
+        " FROM visits"
+        " GROUP BY page ORDER BY cnt DESC LIMIT ?;";
+
+    sqlite3_stmt *stmt = NULL;
+    if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK) return 0;
+    sqlite3_bind_int(stmt, 1, max_n);
+
+    int n = 0;
+    while (sqlite3_step(stmt) == SQLITE_ROW && n < max_n) {
+        const char *name = (const char *)sqlite3_column_text(stmt, 0);
+        strncpy(names[n], name ? name : "/", 127);
+        names[n][127] = '\0';
+        counts[n] = sqlite3_column_int(stmt, 1);
+        n++;
+    }
+    sqlite3_finalize(stmt);
+    return n;
+}
+
+int db_get_views_per_page(char names[][128], int counts[], int max_n) {
+    if (!g_db || max_n <= 0) return 0;
+
+    const char *sql =
+        "SELECT COALESCE(entry_page, '/') AS page, COUNT(*) AS cnt"
+        " FROM visits"
+        " GROUP BY page ORDER BY cnt DESC LIMIT ?;";
+
+    sqlite3_stmt *stmt = NULL;
+    if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK) return 0;
+    sqlite3_bind_int(stmt, 1, max_n);
+
+    int n = 0;
+    while (sqlite3_step(stmt) == SQLITE_ROW && n < max_n) {
+        const char *name = (const char *)sqlite3_column_text(stmt, 0);
+        strncpy(names[n], name ? name : "/", 127);
+        names[n][127] = '\0';
+        counts[n] = sqlite3_column_int(stmt, 1);
+        n++;
+    }
+    sqlite3_finalize(stmt);
+    return n;
+}
+
+int db_get_top_exit_pages(char names[][128], int counts[], int max_n) {
+    if (!g_db || max_n <= 0) return 0;
+
+    const char *sql =
+        "SELECT exit_page AS page, COUNT(*) AS cnt"
+        " FROM visits"
+        " WHERE exit_page IS NOT NULL"
+        " GROUP BY page ORDER BY cnt DESC LIMIT ?;";
+
+    sqlite3_stmt *stmt = NULL;
+    if (sqlite3_prepare_v2(g_db, sql, -1, &stmt, NULL) != SQLITE_OK) return 0;
+    sqlite3_bind_int(stmt, 1, max_n);
+
+    int n = 0;
+    while (sqlite3_step(stmt) == SQLITE_ROW && n < max_n) {
+        const char *name = (const char *)sqlite3_column_text(stmt, 0);
+        strncpy(names[n], name ? name : "/", 127);
+        names[n][127] = '\0';
         counts[n] = sqlite3_column_int(stmt, 1);
         n++;
     }

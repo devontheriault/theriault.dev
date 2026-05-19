@@ -25,6 +25,15 @@ typedef struct {
     int  referrer_counts[10];
     int  referrer_len;
     double avg_time_on_page;
+    char top_entry_pages[10][128];
+    int  entry_page_counts[10];
+    int  entry_page_len;
+    char top_exit_pages[10][128];
+    int  exit_page_counts[10];
+    int  exit_page_len;
+    char views_per_page[10][128];
+    int  views_per_page_counts[10];
+    int  views_per_page_len;
 } StatsResult;
 
 StatsResult analytics_get_stats(const char *country_filter, const char *city_filter, int dow, int hour, const char *browser_filter, const char *device_type_filter, const char *os_filter);
