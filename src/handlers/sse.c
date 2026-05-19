@@ -133,6 +133,15 @@ static int sse_build_json(char *buf, size_t size) {
             i > 0 ? "," : "", esc, stats.os_counts[i]);
     }
 
+    pos += snprintf(buf + pos, size - (size_t)pos, "],\"referrers\":[");
+    for (int i = 0; i < stats.referrer_len && pos < (int)size - 64; i++) {
+        char esc[256];
+        json_string_escape(stats.top_referrers[i], esc, sizeof(esc));
+        pos += snprintf(buf + pos, size - (size_t)pos,
+            "%s{\"referrer\":\"%s\",\"count\":%d}",
+            i > 0 ? "," : "", esc, stats.referrer_counts[i]);
+    }
+
     pos += snprintf(buf + pos, size - (size_t)pos,
         "],\"active_country\":\"\",\"avg_time_on_page\":%.1f}",
         stats.avg_time_on_page);
